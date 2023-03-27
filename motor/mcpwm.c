@@ -1013,6 +1013,7 @@ static void set_duty_cycle_hl(float dutyCycle) {
 			// is spinning, it will be non-zero.
 			if (fabsf(dutycycle_now) < conf->l_min_duty) {
 				dutycycle_now = SIGN(dutyCycle) * conf->l_min_duty;
+				slow_ramping_cycles= 4000;
 			}
 
 			set_duty_cycle_ll(dutycycle_now);

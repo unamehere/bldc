@@ -634,6 +634,9 @@ void mcpwm_set_pid_pos(float pos) {
 
 	if (state != MC_STATE_RUNNING) {
 		set_duty_cycle_hl(conf->l_min_duty);
+#ifdef USE_SKAI_ENABLE
+		skai3_start_up();
+#endif
 	}
 }
 
@@ -659,6 +662,9 @@ void mcpwm_set_current(float current) {
 	current_set = current;
 
 	if (state != MC_STATE_RUNNING) {
+#ifdef USE_SKAI_ENABLE
+		skai3_start_up();
+#endif
 		set_duty_cycle_hl(SIGN(current) * conf->l_min_duty);
 	}
 }
@@ -689,6 +695,9 @@ void mcpwm_set_brake_current(float current) {
 	current_set = current;
 
 	if (state != MC_STATE_RUNNING && state != MC_STATE_FULL_BRAKE) {
+#ifdef USE_SKAI_ENABLE
+		skai3_start_up();
+#endif
 		// In case the motor is already spinning, set the state to running
 		// so that it can be ramped down before the full brake is applied.
 		if (conf->motor_type == MOTOR_TYPE_DC) {
@@ -996,6 +1005,9 @@ static void set_duty_cycle_hl(float dutyCycle) {
 	dutycycle_set = dutyCycle;
 
 	if (state != MC_STATE_RUNNING) {
+#ifdef USE_SKAI_ENABLE
+		skai3_start_up();
+#endif
 		if (fabsf(dutyCycle) >= conf->l_min_duty) {
 			// dutycycle_now is updated by the back-emf detection. If the motor already
 			// is spinning, it will be non-zero.

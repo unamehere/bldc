@@ -700,6 +700,9 @@ void mcpwm_foc_set_duty(float dutyCycle) {
 	if (get_motor_now()->m_state != MC_STATE_RUNNING) {
 		get_motor_now()->m_motor_released = false;
 		get_motor_now()->m_state = MC_STATE_RUNNING;
+#ifdef USE_SKAI_ENABLE
+		skai3_start_up();
+#endif
 	}
 }
 
@@ -742,6 +745,9 @@ void mcpwm_foc_set_pid_speed(float rpm) {
 	if (get_motor_now()->m_state != MC_STATE_RUNNING) {
 		get_motor_now()->m_motor_released = false;
 		get_motor_now()->m_state = MC_STATE_RUNNING;
+#ifdef USE_SKAI_ENABLE
+		skai3_start_up();
+#endif
 	}
 }
 
@@ -759,6 +765,9 @@ void mcpwm_foc_set_pid_pos(float pos) {
 	if (get_motor_now()->m_state != MC_STATE_RUNNING) {
 		get_motor_now()->m_motor_released = false;
 		get_motor_now()->m_state = MC_STATE_RUNNING;
+#ifdef USE_SKAI_ENABLE
+		skai3_start_up();
+#endif
 	}
 }
 
@@ -782,6 +791,9 @@ void mcpwm_foc_set_current(float current) {
 	if (get_motor_now()->m_state != MC_STATE_RUNNING) {
 		get_motor_now()->m_motor_released = false;
 		get_motor_now()->m_state = MC_STATE_RUNNING;
+#ifdef USE_SKAI_ENABLE
+		skai3_start_up();
+#endif
 	}
 }
 
@@ -810,6 +822,9 @@ void mcpwm_foc_set_brake_current(float current) {
 	if (get_motor_now()->m_state != MC_STATE_RUNNING) {
 		get_motor_now()->m_motor_released = false;
 		get_motor_now()->m_state = MC_STATE_RUNNING;
+#ifdef USE_SKAI_ENABLE
+		skai3_start_up();
+#endif
 	}
 }
 
@@ -831,6 +846,9 @@ void mcpwm_foc_set_handbrake(float current) {
 	if (get_motor_now()->m_state != MC_STATE_RUNNING) {
 		get_motor_now()->m_motor_released = false;
 		get_motor_now()->m_state = MC_STATE_RUNNING;
+#ifdef USE_SKAI_ENABLE
+		skai3_start_up();
+#endif
 	}
 }
 
@@ -863,6 +881,9 @@ void mcpwm_foc_set_openloop(float current, float rpm) {
 	if (get_motor_now()->m_state != MC_STATE_RUNNING) {
 		get_motor_now()->m_motor_released = false;
 		get_motor_now()->m_state = MC_STATE_RUNNING;
+#ifdef USE_SKAI_ENABLE
+		skai3_start_up();
+#endif
 	}
 }
 
@@ -898,6 +919,9 @@ void mcpwm_foc_set_openloop_phase(float current, float phase) {
 	if (get_motor_now()->m_state != MC_STATE_RUNNING) {
 		get_motor_now()->m_motor_released = false;
 		get_motor_now()->m_state = MC_STATE_RUNNING;
+#ifdef USE_SKAI_ENABLE
+		skai3_start_up();
+#endif
 	}
 }
 
@@ -1660,7 +1684,9 @@ void mcpwm_foc_encoder_detect(float current, bool print, float *offset, float *r
  */
 float mcpwm_foc_measure_resistance(float current, int samples, bool stop_after) {
 	mc_interface_lock();
-
+#ifdef USE_SKAI_ENABLE
+		skai3_start_up();
+#endif
 	volatile motor_all_state_t *motor = get_motor_now();
 
 	motor->m_phase_override = true;
@@ -1765,6 +1791,9 @@ float mcpwm_foc_measure_resistance(float current, int samples, bool stop_after) 
  */
 float mcpwm_foc_measure_inductance(float duty, int samples, float *curr, float *ld_lq_diff) {
 	volatile motor_all_state_t *motor = get_motor_now();
+#ifdef USE_SKAI_ENABLE
+		skai3_start_up();
+#endif
 
 	mc_foc_sensor_mode sensor_mode_old = motor->m_conf->foc_sensor_mode;
 	float f_zv_old = motor->m_conf->foc_f_zv;
@@ -1938,6 +1967,9 @@ float mcpwm_foc_measure_inductance_current(float curr_goal, int samples, float *
 
 bool mcpwm_foc_beep(float freq, float time, float voltage) {
 	volatile motor_all_state_t *motor = get_motor_now();
+#ifdef USE_SKAI_ENABLE
+		skai3_start_up();
+#endif
 
 	mc_foc_sensor_mode sensor_mode_old = motor->m_conf->foc_sensor_mode;
 	float f_zv_old = motor->m_conf->foc_f_zv;
@@ -2023,6 +2055,9 @@ bool mcpwm_foc_beep(float freq, float time, float voltage) {
 bool mcpwm_foc_measure_res_ind(float *res, float *ind, float *ld_lq_diff) {
 	volatile motor_all_state_t *motor = get_motor_now();
 	bool result = false;
+#ifdef USE_SKAI_ENABLE
+		skai3_start_up();
+#endif
 
 	const float kp_old = motor->m_conf->foc_current_kp;
 	const float ki_old = motor->m_conf->foc_current_ki;
@@ -2086,7 +2121,9 @@ bool mcpwm_foc_hall_detect(float current, uint8_t *hall_table) {
 	volatile motor_all_state_t *motor = get_motor_now();
 
 	mc_interface_lock();
-
+#ifdef USE_SKAI_ENABLE
+		skai3_start_up();
+#endif
 	motor->m_phase_override = true;
 	motor->m_id_set = 0.0;
 	motor->m_iq_set = 0.0;
@@ -2204,6 +2241,10 @@ int mcpwm_foc_dc_cal(bool cal_undriven) {
 			return -1;
 		}
 	};
+
+#ifdef USE_SKAI_ENABLE
+		skai3_start_up();
+#endif
 
 	chThdSleepMilliseconds(1000);
 

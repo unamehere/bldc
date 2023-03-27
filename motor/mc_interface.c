@@ -51,6 +51,8 @@
 volatile uint16_t ADC_Value[HW_ADC_CHANNELS + HW_ADC_CHANNELS_EXTRA];
 volatile float ADC_curr_norm_value[6];
 
+int faultvoltage_counter = 0;
+
 typedef struct {
 	mc_configuration m_conf;
 	mc_fault_code m_fault_now;
@@ -1743,11 +1745,17 @@ void mc_interface_mc_timer_isr(bool is_second_motor) {
 
 	if (input_voltage < conf_now->l_min_vin) {
 		voltage_diff_now = conf_now->l_min_vin - input_voltage;
+		faultvoltage_counter++;
 	} else if (input_voltage > conf_now->l_max_vin) {
 		voltage_diff_now = input_voltage - conf_now->l_max_vin;
+		faultvoltage_counter++;
+	}
+	else
+	{
+		faultvoltage_counter = 0;
 	}
 
-	if (voltage_diff_now > 1.0e-3) {
+	if (voltage_diff_now > 1.0e-3 && faultvoltage_counter >=2) {
 		wrong_voltage_integrator += voltage_diff_now;
 
 		const float max_voltage = (conf_now->l_max_vin * 0.05);
@@ -2023,7 +2031,7 @@ void mc_interface_mc_timer_isr(bool is_second_motor) {
 					m_curr0_samples[m_sample_now] = ADC_curr_norm_value[0];
 					m_curr1_samples[m_sample_now] = ADC_curr_norm_value[1];
 
-					m_ph1_samples[m_sample_now] = ADC_V_L1 - zero;
+					m_ph1_samples[m_sample_now] = ADC_V_ZERO*2;//ADC_V_L1 - zero;
 					m_ph2_samples[m_sample_now] = ADC_V_L2 - zero;
 					m_ph3_samples[m_sample_now] = ADC_V_L3 - zero;
 				}

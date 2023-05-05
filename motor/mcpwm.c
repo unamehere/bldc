@@ -2088,6 +2088,9 @@ void mcpwm_adc_int_handler(void *p, uint32_t flags) {
 
 		static int limit_delay = 0;
 
+		float current_filter = mcpwm_get_tot_current_filtered();
+		float current_in_filter = mcpwm_get_tot_current_in_filtered();
+
 		// Apply limits in priority order
 		if (current_nofilter > conf->lo_current_max) {
 			utils_step_towards((float*) &dutycycle_now, 0.0,

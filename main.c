@@ -191,6 +191,8 @@ static THD_FUNCTION(periodic_thread, arg) {
 				break;
 			}
 		}
+	 
+		HW_TRIM_HSI(); // Compensate HSI for temperature
 
 		chThdSleepMilliseconds(10);
 	}
@@ -238,7 +240,7 @@ int main(void) {
 	timer_init();
 	conf_general_init();
 
-	if( flash_helper_verify_flash_memory() == FAULT_CODE_FLASH_CORRUPTION )	{
+	if (flash_helper_verify_flash_memory() == FAULT_CODE_FLASH_CORRUPTION)	{
 		// Loop here, it is not safe to run any code
 		while (1) {
 			chThdSleepMilliseconds(100);
@@ -257,16 +259,17 @@ int main(void) {
 	comm_usb_init();
 #endif
 
-#if CAN_ENABLE
-	comm_can_init();
-#endif
-
 	app_uartcomm_initialize();
 	app_configuration *appconf = mempools_alloc_appconf();
 	conf_general_read_app_configuration(appconf);
 	app_set_configuration(appconf);
 	app_uartcomm_start(UART_PORT_BUILTIN);
 	app_uartcomm_start(UART_PORT_EXTRA_HEADER);
+
+	// This reads the appconf, that must be initialized first.
+#if CAN_ENABLE
+	comm_can_init();
+#endif
 
 #ifdef HW_HAS_PERMANENT_NRF
 	conf_general_permanent_nrf_found = nrf_driver_init();
@@ -293,8 +296,6 @@ int main(void) {
 	timeout_init();
 	timeout_configure(appconf->timeout_msec, appconf->timeout_brake_current, appconf->kill_sw_mode);
 
-	mempools_free_appconf(appconf);
-
 #if HAS_BLACKMAGIC
 	bm_init();
 #endif
@@ -314,11 +315,15 @@ int main(void) {
 
 #ifdef CAN_ENABLE
 	// Transmit a CAN boot-frame to notify other nodes on the bus about it.
-	comm_can_transmit_eid(
-		app_get_configuration()->controller_id | (CAN_PACKET_NOTIFY_BOOT << 8),
-		(uint8_t *)HW_NAME, (strlen(HW_NAME) <= CAN_FRAME_MAX_PL_SIZE) ?
-		strlen(HW_NAME) : CAN_FRAME_MAX_PL_SIZE);
+	if (appconf->can_mode == CAN_MODE_VESC) {
+		comm_can_transmit_eid(
+				app_get_configuration()->controller_id | (CAN_PACKET_NOTIFY_BOOT << 8),
+				(uint8_t *)HW_NAME, (strlen(HW_NAME) <= CAN_FRAME_MAX_PL_SIZE) ?
+						strlen(HW_NAME) : CAN_FRAME_MAX_PL_SIZE);
+	}
 #endif
+
+	mempools_free_appconf(appconf);
 
 	for(;;) {
 		chThdSleepMilliseconds(10);

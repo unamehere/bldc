@@ -21,6 +21,7 @@
 #include "lbm_types.h"
 #include "stack.h"
 #include "lbm_channel.h"
+#include "lbm_flat_value.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -32,6 +33,12 @@ extern "C" {
 #define EVAL_CPS_STATE_STEP    3
 #define EVAL_CPS_STATE_KILL    4
 
+#define EVAL_CPS_DEFAULT_MAILBOX_SIZE 10
+
+#define EVAL_CPS_CONTEXT_FLAG_NOTHING       (uint32_t)0x0
+#define EVAL_CPS_CONTEXT_FLAG_TRAP          (uint32_t)0x1
+#define EVAL_CPS_CONTEXT_FLAG_CONST         (uint32_t)0x2
+  
 /** The eval_context_t struct represents a lispbm process.
  *
  */
@@ -39,20 +46,42 @@ typedef struct eval_context_s{
   lbm_value program;
   lbm_value curr_exp;
   lbm_value curr_env;
-  lbm_value mailbox;  /*massage passing mailbox */
+  lbm_value *mailbox;    /* Message passing mailbox */
+  uint32_t  mailbox_size;
+  uint32_t  num_mail;    /* Number of messages in mailbox */
+  uint32_t  flags;
   lbm_value r;
   char *error_reason;
-  bool  done;
   bool  app_cont;
   lbm_stack_t K;
-  /* Process control */
   lbm_uint timestamp;
   lbm_uint sleep_us;
   lbm_cid id;
+  lbm_cid parent;
+  /* while reading */
+  lbm_int row0;
+  lbm_int row1;
   /* List structure */
   struct eval_context_s *prev;
   struct eval_context_s *next;
 } eval_context_t;
+
+typedef enum {
+  LBM_EVENT_FOR_HANDLER = 0,
+  LBM_EVENT_UNBLOCK_CTX,
+} lbm_event_type_t;
+
+typedef struct {
+  lbm_event_type_t type;
+  lbm_uint parameter;
+  lbm_uint buf_ptr;
+  uint32_t  buf_len;
+} lbm_event_t;
+
+/** Fundamental operation type */
+typedef lbm_value (*fundamental_fun)(lbm_value *, lbm_uint, eval_context_t*);
+
+extern const fundamental_fun fundamental_table[];
 
 /** A function pointer type to use together with the queue iterators.
  *
@@ -80,7 +109,39 @@ int lbm_eval_init(void);
  *   \param quota The new quota.
  */
 void lbm_set_eval_step_quota(uint32_t quota);
-
+/** Initialize events
+ * \param num_events The maximum number of unprocessed events.
+ * \return true on success, false otherwise.
+ */
+bool lbm_eval_init_events(unsigned int num_events);
+/** Get the process ID for the current event handler.
+ * \return process ID on success and -1 if no event handler is registered.
+ */
+lbm_cid lbm_get_event_handler_pid(void);
+/** Set the event handler process ID.
+ * \param pid The ID of the process to which events should be sent
+ */
+void lbm_set_event_handler_pid(lbm_cid pid);
+/** Check if an event handler is registerd.
+ * \return True if event handler exists, otherwise false.
+ */
+bool lbm_event_handler_exists(void);
+/** Send an event to the registered event handler process.
+ * If lbm_event returns false the C code will still be responsible for
+ * the flat_value passed into lbm_event. If lbm_event returns true,
+ * the LBM runtime system will take responsibility for the freeing
+ * of the memory allocated in the flat_value.
+ * \param event The event to send to the registered handler.
+ * \param opt_array An optional array to pass to the event handler.
+ * \param opt_array_len Length of array mandatory if array is passed in.
+ * \return true if the event was successfully enqueued to be sent, false otherwise.
+ */
+bool lbm_event(lbm_flat_value_t *fv);
+/** Send an unboxed value as an event to the event handler.
+ * \param unboxed. An lbm_value (encoded) such as a symbol. int, uint, character.
+ * \return true on success.
+ */
+bool lbm_event_unboxed(lbm_value unboxed);
 /** Remove a context that has finished executing and free up its associated memory.
  *
  * \param cid Context id of context to free.
@@ -128,16 +189,6 @@ void lbm_pause_eval(void);
  * \param num_free Perform GC if there are less than this many elements free on the heap.
  */
 void lbm_pause_eval_with_gc(uint32_t num_free);
-/** Perform a single step of evaluation.
- * The evaluator should be in EVAL_CPS_STATE_PAUSED before running this function.
- * After taking one step of evaluation, the evaluator will return to being in the
- * EVAL_CPS_STATE_PUASED state.
- */
-void lbm_step_eval(void);
-/** Perform multiple steps of evaluation.
- * \param n Number of eval steps to perform.
- */
-void lbm_step_n_eval(uint32_t n);
 /** Resume from being in EVAL_CPS_STATE_PAUSED.
  *
  */
@@ -174,13 +225,24 @@ lbm_cid lbm_create_ctx(lbm_value program, lbm_value env, lbm_uint stack_size);
 /** Block a context from an extension
  */
 void lbm_block_ctx_from_extension(void);
+  /** Undo a previous call to lbm_block_ctx_from_extension.
+   */
+  void lbm_undo_block_ctx_from_extension(void);
 /** Unblock a context that has been blocked by a C extension
  *  Trying to unblock a context that is waiting on a message
  *  in a mailbox is not encouraged
  * \param cid Lisp process to wake up.
- * \param result Value passed to the lisp process as the result from the blocking function.
+ * \param fv lbm_flat_value to give return as result from the unblocket process.
  */
-bool lbm_unblock_ctx(lbm_cid cid, lbm_value result);
+bool lbm_unblock_ctx(lbm_cid cid, lbm_flat_value_t *fv);
+/** Unblock a context bypassing the event-queue.
+ *  Since the context will be unblocked in a separate tread it cannot
+ *  take a composite return value. Only unboxed lbm_values are allowed.
+ * \param cid Lisp process to inblock.
+ * \param unboxed An unboxed lbm_value: char, i, u or symbol type.
+ * \return True on successfully unblocking. False otherwise.
+ */
+bool lbm_unblock_ctx_unboxed(lbm_cid cid, lbm_value unboxed);
 /**  Iterate over all ready contexts and apply function on each context.
  *
  * \param f Function to apply to each context.
@@ -201,14 +263,7 @@ void lbm_blocked_iterator(ctx_fun f, void*, void*);
  * \param arg1 Pointer argument that can be used to convey information back to user.
  * \param arg2 Same as above
  */
-void lbm_done_iterator(ctx_fun f, void*, void*);
-/** Iterate over all sleeping contexts and apply function on each context.
- * 
- * \param f Function to apply to each context.
- * \param arg1 Pointer argument that can be used to convey information back to user.
- * \param arg2 Same as above. 
- */
-void lbm_sleeping_iterator(ctx_fun f, void *, void *);  
+void lbm_sleeping_iterator(ctx_fun f, void *, void *);
 /** toggle verbosity level of error messages
  */
 void lbm_toggle_verbose(void);
@@ -243,18 +298,31 @@ void lbm_set_printf_callback(int (*prnt)(const char*, ...));
  * an undefined symbol
  */
 void lbm_set_dynamic_load_callback(bool (*fptr)(const char *, const char **));
-/** Set a callback that is run when reading source is finishes
- *  within a context
- */
-void lbm_set_reader_done_callback(void (*fptr)(lbm_cid));
 /** Get the CID of the currently executing context.
  *  Should be called from an extension where there is
  *  a guarantee that a context is running
  */
 lbm_cid lbm_get_current_cid(void);
 
+/** Get the currently executing context.
+ * Should be called from an extension where there is
+ * a guarantee that a context is running
+ */
+eval_context_t *lbm_get_current_context(void);
+
+/** Change the mailbox size for a given context.
+ * \param ctx The context to change mailbox size for.
+ * \param new_size The new size of the mailbox.
+ * \return true on success and false otherwise.
+ */
+bool lbm_mailbox_change_size(eval_context_t *ctx, lbm_uint new_size);
+
 bool create_string_channel(char *str, lbm_value *res);
+
 bool lift_char_channel(lbm_char_channel_t *ch, lbm_value *res);
+
+lbm_flash_status request_flash_storage_cell(lbm_value val, lbm_value *res);
+  //bool lift_array_flash(lbm_value flash_cell, char *data, lbm_uint num_elt);
 
 /** deliver a message
  *

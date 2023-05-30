@@ -23,6 +23,7 @@
 #include "symrepr.h"
 #include "heap.h"
 #include "lbm_types.h"
+#include "lbm_constants.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -45,6 +46,14 @@ typedef lbm_value (*extension_fptr)(lbm_value*,lbm_uint);
  * \return 1 on success and 0 for failure
  */
 int lbm_extensions_init(extension_fptr *extension_storage, int extension_storage_size);
+/** The number of extensions that can be allocated.
+ * \return The maximum number of extensions that can be added.
+ */
+lbm_uint lbm_get_max_extensions(void);
+/** Get the number of allocated extensions
+ * \return The number of extensions that have been added.
+ */
+lbm_uint lbm_get_num_extensions(void);
 /** Look up an extension associated with a key symbol.
  *
  * \param sym Symbol bound to the extension to look for.
@@ -74,6 +83,36 @@ static inline bool lbm_is_extension(lbm_value exp) {
   return ((lbm_type_of(exp) == LBM_TYPE_SYMBOL) &&
           (lbm_get_extension(lbm_dec_sym(exp)) != NULL));
 }
+
+
+/** Check if a value is the symbol t or the symbol nil
+ * \param v The value.
+ * \return true if the value is t or nil otherwise false.
+ */
+bool lbm_check_true_false(lbm_value v);
+/** Check if all arguments are numbers. Sets error-reason if result is false.
+ * \param args The argument array.
+ * \param argn The number of arguments.
+ * \return true if all arguments are numbers, false otherwise.
+ */
+bool lbm_check_number_all(lbm_value *args, lbm_uint argn);
+/** Check if the number of arguments is n. Sets error-reason if result is false.
+ * \param argn number of arguments.
+ * \param n number of expected arguments.
+ * \return true if the number of arguments is correct. false otherwise
+ */
+bool lbm_check_argn(lbm_uint argn, lbm_uint n);
+/** Check if all arguments are numbers and that there is n of them. Sets error-reason if result is false.
+ * \param args The argument array.
+ * \param argn The number of arguments.
+ * \param n The expected number of arguments.
+ * \return true or false.
+ */
+bool lbm_check_argn_number(lbm_value *args, lbm_uint argn, lbm_uint n);
+
+#define LBM_CHECK_NUMBER_ALL() if (!lbm_check_number_all(args, argn)) {return ENC_SYM_EERROR;}
+#define LBM_CHECK_ARGN(n) if (!lbm_check_argn(argn, n)) {return ENC_SYM_EERROR;}
+#define LBM_CHECK_ARGN_NUMBER(n) if (!lbm_check_argn_number(args, argn, n)) {return ENC_SYM_EERROR;}
 
 #ifdef __cplusplus
 }

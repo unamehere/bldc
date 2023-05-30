@@ -1,18 +1,19 @@
 # LispBM language reference
 
-## About Symbols 
+## About Symbols
 
-Symbols are very important and fundamental to LispBM and also perhaps 
-a bit different from identifiers/names used in languages such as C, so 
-a short intro could be good here. 
+Symbols are very important and fundamental to LispBM and also perhaps
+a bit different from identifiers/names used in languages such as C, so
+a short intro could be good here.
 
-A symbol can be thought of as a name and can be used to give names 
-to functions or values (variables). A symbol can also be treated and 
-used as a value in and of itself a value (or data). So it can be used 
-to name data and functions and is itself also data. 
+A symbol can be thought of as a name and can be used to give names
+to functions or values (variables). A symbol can also be treated and
+used as a value in and of itself a value (or data). So it can be used
+to name data and functions and is itself also data.
 
---- 
-**NOTE** 
+---
+
+**NOTE**
 
 Symbols are expressed as strings in your program such as `a`, `let`,
 `define`, `+` or `orange`. The "reader", the part of LBM that parses
@@ -23,18 +24,18 @@ identifier you want to print. So the runtime system is never wasting
 time comparing strings to see if a symbol is this or that symbol, it's
 all integer comparisons.
 
---- 
+---
 
 You associate values with symbols using, <a href="#define">define</a>,
-<a href="#let">let</a> and you can change the value bound to a "variable" 
+<a href="#let">let</a> and you can change the value bound to a "variable"
 using <a href="#setvar">setvar</a>
 
-Not all symbols are treated the same in LBM. Some symbols are treated as 
+Not all symbols are treated the same in LBM. Some symbols are treated as
 special because of their very fundamental nature. Among these special symbols
-you find `define`, `let` and `lambda` for example. These are things that you 
-should not be able to redefine and trying to redefine them leads to an error. 
-There are two classes of symbols that are special by naming convention and 
-these either start with a `#`, for fast-lookup variables, and `ext-` for 
+you find `define`, `let` and `lambda` for example. These are things that you
+should not be able to redefine and trying to redefine them leads to an error.
+There are two classes of symbols that are special by naming convention and
+these either start with a `#`, for fast-lookup variables, and `ext-` for
 extensions that will be bound at runtime.
 
 Examples of symbols used as data are `nil` and `t`. `nil` is used the
@@ -127,8 +128,8 @@ Compute 5 % 3, evaluates to 2.
 
 ### eq
 
-Compare expressions for equality. The eq implements structural
-equality.  The form of an eq expression is `(eq expr1 ... exprN)`
+Compare expressions for equality. The `eq` operation implements structural
+equality.  The form of an `eq` expression is `(eq expr1 ... exprN)`
 
 
 Compare the result of `(+ 1 2)` with 3. The
@@ -149,12 +150,20 @@ The following examples evaluate to `nil` representing false.
 
 (eq (+ 1 2) (+ 0 2) (+ -1 2))
 ```
-The = comparison can be used on tree shaped data. The following expression evaluates to
-`t`.
+
+The `eq` comparison can be used on tree shaped data. The following
+expression evaluates to `t`.
+
 ```clj
 (eq '(1 (1 2)) '(1 (1 2)))
 ```
 
+---
+
+### not-eq
+
+`not-eq` implements the negation of eq. In other words, `(not-eq a b c)` evaluates
+to the same result as `(not (eq a b c))`.
 
 ---
 
@@ -165,7 +174,7 @@ If you know you are comparing numbers, it will be more efficient to use
 `=`.
 
 An important difference between `eq` and `=` is
-that equals compare the numerical values of the arguments. A 3 is a 3
+that `=` compare the numerical values of the arguments. A 3 is a 3
 independent of them being different types. `eq` on the other
 hand compares the representations of the arguments exactly and they must
 match in structure, type and value to be considered equal.
@@ -176,6 +185,13 @@ Example of `=` comparison.
 (= (+ 2 3) (+ 1 4))
 ```
 
+
+---
+
+### !=
+
+The `!=` operation implements the negation of `=`. So, `(!= a b)` evaluates
+to the same result as `(not (= a b))`.
 
 ---
 
@@ -205,9 +221,9 @@ Example
 
 ---
 
-### >= 
+### >=
 
-Greater than or equal comparison. A less than comparison has the form `(>= expr1 ... exprN)`
+Greater than or equal comparison. A greater than comparison has the form `(>= expr1 ... exprN)`
 and evaluates to `t` if expr1 is greater than or equal to all of expr2 ... exprN.
 
 
@@ -249,7 +265,7 @@ The example below evaluates to `t`
 ```clj
 (and t t)
 ```
-The folowing example evaluates to 3
+The following example evaluates to 3
 ```clj
 (and t t (+ 1 2))
 ```
@@ -345,58 +361,9 @@ is the same type as the first of the arguments.
 Performs the bitwise not operations on a value. The result is of same type as
 the argument.
 
-## Low level operations
-
-### encode-i32
-
-The `encode-i32` function converts a list of four (byte sized) values
-into an i32 value.
-
-Example that evaluates to the i32 value 1024.
-```clj
-(encode-i32 (list 0 0 4 0))
-```
-
-
 ---
 
-### encode-u32
-
-The `encode-u32` function converts a list of four (byte sized) values
-into an u32 value.
-
-Example that evaluates to the u32 value 1024.
-```clj
-(encode-u32 (list 0 0 4 0))
-```
-
----
-
-### encode-float
-
-The `encode-float` function converts a list four (byte sized) values
-into a float value.
-
-Example that evaluates to 3.14.
-```clj
-(encode-float (list 64 72 245 195))
-```
-
-
----
-
-### decode
-
-The `decode` function decodes a value into a list of four (byte sized) values.
-
-Example that decodes float 3.14 into the list (64 72 245 195).
-```clj
-(decode 3.14)
-```
-
----
-
-## nil and t
+## nil and t, true and false
 
 ### nil
 
@@ -413,8 +380,20 @@ and nil in the <a href="#cdr"> cdr </a> field.
 
 ### t
 
-All non nil values are considered true in conditionals. t should be used in cases where an
+All non nil values are considered true in conditionals. `t` should be used in cases where an
 explicit true makes sense.
+
+---
+
+### true
+
+`true` is an alias for `t`.
+
+---
+
+### false
+
+`false` is an alias for `nil`.
 
 ---
 
@@ -493,13 +472,18 @@ Example that evaluates to 3.
 
 Evaluate a list of data where each element represents an expression.
 
-This function interacts with the continuation passing style
-of the evaluator in a slightly non-intuitive way and should
-be avoided in programs. It is used internally by the c-interoperation
-code to start evaluation of newly loaded program.
+Example that results in the value 15:
+```
+(define prg '( (+ 1 2) (+ 3 4) (+ 10 5)))
+(eval-program prg)
+```
 
-If you want to evaluate a program you can always use `eval` and
-put the program you wish to evaluate in a `progn` form.
+Example that prints the strings "apa", "bepa" and "cepa":
+```
+(define prg '( (print "apa") (print "bepa") (print "cepa")))
+(eval-program prg)
+```
+
 
 ---
 
@@ -562,18 +546,6 @@ get as result a unnamed symbol.
 
 ---
 
-### is-fundamental
-
-The `is-funamental` function returns true for built-in functions.
-
-Example that returns true.
-```clj
-(is-fundamental '+)
-```
-
----
-
-
 ## Special forms
 
 
@@ -581,7 +553,7 @@ Example that returns true.
 
 Conditionals are written as `(if cond-expr then-expr else-expr)`.
 If the cond-expr evaluates to <a href="#nil"> nil </a> the else-expr will be evaluated.
-for any other value of cond-expr the then-expr will be evalated.
+for any other value of cond-expr the then-expr will be evaluated.
 
 
 The example below evaluates to 0 if a is less than or equal to 4. Otherwise it evaluates to a + 10.
@@ -589,6 +561,36 @@ The example below evaluates to 0 if a is less than or equal to 4. Otherwise it e
 (if (> a 4) (+ a 10) 0)
 ```
 
+---
+
+### cond
+
+`cond` is a generalization of `if` to discern between n different cases
+based on boolean expressions. The form of a `cond` expression is:
+`(cond ( cond-expr1 expr1) (cond-expr2 expr2) ... (cond-exprN exprN))`.
+The conditions are checked from first to last and for the first `cond-exprN`
+that evaluates to true, the corresponding `exprN` is evaluated.
+
+If no `cond-exprN` evaluates to true, the result of the entire conditional
+is `nil`.
+
+Example that prints "Hello world":
+```clj
+(define a 0)
+
+(cond ( (< a 0) (print "abrakadabra"))
+      ( (> a 0) (print "llama"))
+      ( (= a 0) (print "Hello world")))
+```
+
+Example that evaluates to `nil` as none of the conditions evaluate to true.
+```clj
+(define a 5)
+
+(cond ( (= a 1)  'doughnut )
+      ( (= a 7)  'apple-strudel )
+      ( (= a 10) 'baklava))
+```
 ---
 
 ### lambda
@@ -663,6 +665,18 @@ The mutually recursive program above evaluates to 1.
 
 ---
 
+Let supports deconstructive bindings. These are bindings that decompose a complex
+value into constituents.
+
+Example:
+
+```clj
+(let (( ( a . b) '(1 . 2) ))
+   (+ a b))
+```
+
+In the example, the bindings a = 1 and b = 2 are created for use in the let body.
+
 ### define
 
 You can give names to values in a global scope by using define.
@@ -674,6 +688,27 @@ Example
 ```clj
 (define apa 10)
 ```
+---
+
+### undefine
+
+A definition in the global can be removed using undefine.  The form of
+an undefine expression is `(undefine name-expr)` where name-expr
+should evaluate to a symbol (for example `'apa`).
+
+Example
+```clj
+(undefine 'apa)
+```
+
+It is also possible to undefine several bindings at the same time by
+providing a list of names.
+
+Example
+```clj
+(undefine '(apa bepa cepa))
+```
+
 ---
 
 ### setvar
@@ -713,6 +748,56 @@ And you can change the value of a `#var`.
 
 ---
 
+### set
+
+The `set` form is used to change the value of a variable in an environment.
+It behaves identical to `setvar`.
+
+Example:
+
+```clj
+(define a 10)
+```
+The variable `a` is now 10 in the global environment.
+
+```clj
+(set 'a 20)
+```
+
+And now `a` is associated with 20 in the global environment.
+
+`set` works in local environments too such as in the body of a `let`
+or in a `progn`-local variable created using `var`.
+
+Example:
+
+```clj
+(progn (var a 10) (set 'a 20) a)
+``` 
+
+The expression above evaluates to 20.
+
+### setq
+
+The `setq` special-form is similar to `set` and to `setvar` but expects the first argument
+to be a symbol. The first argument to `setq` is NOT evaluated.
+
+Example:
+```clj
+(define a 10)
+```
+The variable `a` is now 10 in the global environment.
+
+```clj
+(setq a 20)
+```
+
+And now `a` has been associated with the value 20 in the global env.
+
+Just like `set` and `setvar`, `setq` can be used on variables that
+are bound locally such as in the body of a `let` or a `progn`-local variable
+created using `var`. 
+
 ### progn
 
 The progn special form allows you to sequence a number of expressions.
@@ -742,6 +827,69 @@ This program evaluates 30 but also extends the global environment with the
 2 bindings `(a 10)` and `(b 20)` created using <a href="#define">define</a>.
 
 ---
+
+### {
+
+The curlybrace `{` syntax is a short-form (syntactic sugar) for `(progn`.
+The parser replaces occurrences of `{` with `(progn`. The `{` should be
+closed with an `}`. 
+
+These two programs are thus equivalent:
+
+```clj
+(progn
+  (define a 10)
+  (define b 20)
+  (+ a b))
+
+``` 
+
+And
+
+```clj
+{
+  (define a 10)
+  (define b 20)
+  (+ a b)
+}
+``` 
+
+---
+
+### }
+
+The closing curlybrace `}` should be used to close an opening `{` but purely
+for esthetical reasons. The `}` is treated identically to a regular closing parenthesis `)`.
+
+The opening `{` and closing `}` curlybraces are used as a short-form for `progn`-blocks
+of sequences expressions. 
+
+
+### var
+
+The var special form allows local bindings in a progn expression. A
+var expression is of the form (var symbol expr) and the symbol `symbol`
+is bound to the value that `expr` evaluates to withing the rest of the progn expression.
+
+Example:
+
+```clj
+(defun f ()
+  (progn
+    (var a 10)
+    (var b 20)
+    (+ a b)))
+```
+
+and:
+
+```clj
+(defun f ()
+  (progn
+    (var a 10)
+    (var b (+ a 10))
+    (+ a b)))
+```
 
 ### read
 
@@ -784,102 +932,150 @@ has been extended with the binding `(apa 1)`.
 
 ---
 
+### read-eval-program
 
-### namespace
+Parses and evaluates a program incrementally. `read-eval-program` reads a top-level expression
+then evaluates it before reading the next. 
 
-Creates a new namespace to reduce the effect and likelyhood of colliding
-names for things. Use a namespace to hold definitions that are related
-to eachother. 
+Example that evaluates to 20:
 
-Namespaces in LBM form a multiply branching tree of subnamespaces. There is
-a root namespace that is unnamed. Definitions in a namespaces can only be reached from a parent
-namespace, not by siblings or children of that namespace. 
-
-The example below creates a namespace as a child to the current namespace
-and defines a to be 1000 within the `myspace`.
-```lisp
-(namespace myspace
-	   (define a 1000))
+```clj
+(read-eval-program "(define a 10) (+ a 10)")
 ```
 
-To access `a` from the parent namespace you use a namespace "path" expressed
-as symbols separated by `:`
+`read-eval-program` supports the `@const-start`, `@const-end` which moved all
+global definitions created in the program to constant memory (flash).
 
-```
-# myspace:a
-> 1000
-```
+Example that evaluates to 20:
 
-Multiple definitions can be added to a namespace in one go by using `progn`
+```clj
+(read-eval-program "@const-start (define a 10) (+ a 10) @const-end")
+``` 
+---
 
-```lisp
-(namespace loads-a-stuff
-	   (progn
-		(define a 1)
-		(define b 2)
-		(define c 3)
-		(define f (lambda (x) (+ x 10)))))
-```
+### @const-start
 
-Namespaces can be nested as:
-```lisp
-(namespace n1
-	   (namespace n2
-	   	      (define a 42)))
+`@const-start` opens a block of code where each global definition is
+moved to constant memory (flash) automatically. This can be used only together with the
+incremental reader (such as `read-eval-program`).
 
-```
+A `@const-start` opened block should be closed with a `@const-end`. Constant blocks
+cannot be nested. 
 
-and to access `a` under n1 and n2 is done by:
+Example:
 
-```
-# n1:n2:a
-> 42
-```
+```clj
+@const-start
 
-The last thing to occur in an `n1:n2: ...` sequence does not have to
-be a symbols. It can be an arbitrary expression that will be evaluated in
-the namespace identified by the path.
+(defun f (x) (+ x 1))  ; a function stored in constant memory
 
-```
-# n1:n2:(+ a 1000)
-> 1042
-```
+@const-end
 
-The syntax using symbols separated by `:` (as `n1:n2:a`) expands
-into applications of the `namespace` form. For example `n1:n2:a`
-expands into `(namespace n1 (namespace n2 a))` upon parsing.
-So the following two programs do the same thing:
+(+ f 2)
+``` 
 
-```lisp
-(namespace space (define stars 1000))
-```
+### @const-end
 
-and
+`@const-end` closes an block opened by `@const-start`.
 
-```lisp
-space:(define stars 1000)
+
+### move-to-flash
+
+A value can be moved to flash storage to save space on the normal evaluation heap or lbm memory.
+A `move-to-flash` expression is of the form `(move-to-flash sym opt-sym1 ... opt-symN)`.
+The symbols `sym`, `opt-sym1 ... opt-symN` should be globally bound to the values you want moved
+to flash. After the value has been moved, the environment binding is updated to point into flash
+memory. **CAUTION** This function should be used carefully. Ideally a value should be moved
+to flash immediately after it is created so there is no chance that other references to original value
+exists.
+
+Example that moves an array to flash storage:
+
+```clj
+(define a [1 2 3 4 5 6])
+
+(move-to-flash a)
 ```
 
-Both of the programs above defines `stars` to 1000 in the namespace `space`.
-Both of the programs above also create the `space` namespace if it does not
-already exist.
+Example that moves a list to flash storage:
 
+```clj
+(define ls '(1 2 3 4 5))
+
+(move-to-flash ls)
+```
+
+Functions can be moved to flash storage as well:
+
+```clj
+(defun f (x) (+ x 1))
+
+(move-to-flash f)
+```
+
+### make-env
+
+The `make-env` form allows you to create an environment as a value.
+The form of an `make-env` expression is `(make-env exp)`. When
+The result of running `(make-env exp)` is the resulting environment after
+evaluating the expression `exp`. The resulting environment is an association list.
+
+`make-env` can be used to encapsulate a set of bindings under a name.
+
+Example:
+
+```clj
+(define my-env (make-env {
+        (defun f (x) (+ x 1))
+        (defun g (x y) (+ x y))
+        }))
+```
+
+See `in-env` for how to evaluate expressions inside of a provided environment.
 
 ---
-**NOTE**
-Namespaces has no influence on #variables which all remain accessible from
-any space.
 
-The same is true for extensions. Extensions and #variables can be considered to
-be part of some other globally available namespace.
 
----
+### in-env
+
+The `in-env` form allows the evaluation in an environment that has
+been augmented by an environment (association list) provided.
+The form of an `in-env` expression is `(in-env env-expr expr)`. Here the
+expression `expr` is evaluated with the local environemnt augmented with
+the result of `env-expr`. The resulting environment of a `make-env` application
+is compatible with the `env-expr` of `in-env` but any association list is ok.
+
+Example:
+
+```clj
+(define my-env '( (a . 10) (b . 20)))
+
+(in-env my-env (+ a b))
+```
+
+The example above evaluates to 30.
+
+Example combining `in-env` and `make-env`:
+
+```clj
+(define lib
+  (make-env {
+   (define a 10)
+   (define b 20)
+   (define c 30)
+   }))
+
+
+(in-env lib (+ a b))
+```
+
+
 
 ---
 
 ## Lists and cons cells
 
-Lists are build using cons cells. A cons cell is represented by the lbm_cons_t struct in the
+Lists are built using cons cells. A cons cell is represented by the lbm_cons_t struct in the
 implementation and consists of two fields named the `car` and the `cdr`.
 There is no special meaning associated with the `car` and the `cdr` each can hold
 a lbm_value. See <a href="#cons">cons</a> and <a href="#list">list</a> for two ways to create structures of
@@ -889,7 +1085,7 @@ cons cells on the heap.
 
 A cons cell can be used to store a pair of values. You create a pair by
 sticking a value in both the car and cdr field of a cons cell using either `'(1 . 2)` or
-`(cons 1 2)`. 
+`(cons 1 2)`.
 
 ![pair](images/pair.png?raw=true "pair")
 
@@ -928,7 +1124,7 @@ The `car` operation accesses the head element of a list. The following program e
 
 Use `first` to access the first element of a list or pair. A `first` expression  has the form `(first expr)`.
 
-```lisp
+```clj
 # (first (list 1 2 3 4))
 > 1
 ```
@@ -957,7 +1153,7 @@ The `cdr` operation gives you the rest of a list. The example below evaluates to
 
 Use `rest` to access all elements except the first one of a list, or to access the second element in a pair. A `rest` expression has the form `(rest expr)`.
 
-```lisp
+```clj
 # (rest (list 1 2 3 4))
 > (2 3 4)
 ```
@@ -1006,6 +1202,47 @@ Example that creates the list (1 2 3 4).
 
 ---
 
+### length
+
+Computes the length of a list. The `length` function takes
+one argument and is of the form `(length expr)`.
+
+Example that evaluates to 4
+```clj
+
+(length (list 1 2 3 4))
+```
+
+---
+
+### range
+
+The `range` function computes a list with integer values from a
+range specified by its endpoints. The form of a range expression
+is `(range start-expr end-expr)`. The end point in the range is excluded.
+
+Example that generates the list (4 5 6 7).
+```clj
+(range 4 8)
+```
+
+A range specified with the end-point being smaller than the
+starting point is in descending order.
+
+Example that generates the list (7 6 5 4).
+```clj
+(range 8 4)
+```
+
+Negative number can be used to specify a range
+
+Example that generates the list (-10 -9 -8 -7 -6 -5 -4 -3 -2 -1 0 1 2 3 4 5 6 7 8 9)
+```clj
+(range -10 10)
+```
+
+---
+
 ### append
 
 The `append` function combines two lists into a longer list.
@@ -1036,7 +1273,7 @@ Destructively update an element in a list. The form of a `setix` expression
 is `(setix list-expr index-extr value-expr)`. Indexing starts from 0 and
 if you index out of bounds the result is nil.
 
-```lisp
+```clj
 # (setix (list 1 2 3 4 5) 2 77)
 > (1 2 77 4 5)
 ```
@@ -1075,30 +1312,64 @@ Now change the value in the cdr field of apa to 42.
 ```
 The `apa` pair is now `(1 . 42)`.
 
-## Associations lists (alists) 
+---
 
-Association lists (alists) are, just like regular lists, built out 
-of cons-cells. The difference is that an alist is a list of pairs 
-where the first element in each par can be thought of as a key and 
+### take
+
+`take` creates a list containing the `n` first elements of another list.
+The form of a `take` expression is `(take list-exp n-exp)`.
+
+Example that takes 5 elements from a list:
+```clj
+(define ls (list 1 2 3 4 5 6 7 8 9 10))
+
+(take ls 5)
+```
+
+In the example above, the result of `(take ls 5)` is `(1 2 3 4 5)`.
+
+---
+
+### drop
+
+`drop` creates a list from another list by dropping the `n` first elements of that list.
+The form of a `drop` expression is `(drop list-exp n-exp)`.
+
+Example that drops 5 elements from a list:
+```clj
+(define ls (list 1 2 3 4 5 6 7 8 9 10))
+
+(drop ls 5)
+```
+
+Here `(drop ls 5)` evaluates to the list `(6 7 8 9 10)`.
+
+---
+
+## Associations lists (alists)
+
+Association lists (alists) are, just like regular lists, built out
+of cons-cells. The difference is that an alist is a list of pairs
+where the first element in each par can be thought of as a key and
 the second element can be thought of as the value. So alists implement
-a key-value lookup structure. 
+a key-value lookup structure.
 
-`(list '(1 . horse) '(2 . donkey) '(3 . shark))` is an example 
-of an alist with integer keys and symbol values. 
+`(list '(1 . horse) '(2 . donkey) '(3 . shark))` is an example
+of an alist with integer keys and symbol values.
 
-### acons 
+### acons
 
-The `acons` form is similar to `cons`, it attaches one more element 
-onto an alist. The element that is added consists of a key and a value 
-so `acons` takes one more argument than `cons`. The form of an 
-`acons` expression is `(acons key-expr val-expr alist-expr)`. 
-The `alist-expr` should evaluate to an alist but there are no checks 
-to ensure this. 
+The `acons` form is similar to `cons`, it attaches one more element
+onto an alist. The element that is added consists of a key and a value
+so `acons` takes one more argument than `cons`. The form of an
+`acons` expression is `(acons key-expr val-expr alist-expr)`.
+The `alist-expr` should evaluate to an alist but there are no checks
+to ensure this.
 
-Example that adds the key `4` and associated value `lemur` to 
-an existing alist. 
+Example that adds the key `4` and associated value `lemur` to
+an existing alist.
 
-```lisp
+```clj
 # (acons 4 'lemur (list '(1 . horse) '(2 . donkey) '(3 . shark)))
 > ((4 . lemur) (1 . horse) (2 . donkey) (3 . shark))
 ```
@@ -1138,112 +1409,120 @@ The `setassoc` function destructively updates a key-value mapping in an
 alist. The form of a `setassoc` expression is `(setassoc alist-expr key-expr value-expr)`. 
 
 
-## Arrays
+## Arrays (byte-buffers)
+ 
+### bufcreate
 
-### array-create
+Create an array of bytes. The
+form of an `bufcreate` expression is `(bufcreate size-expr)`
 
-Create an array of a given type, default is an array of bytes. The 
-form of an `array-create` expression is either `(array-create type size-expr)`
-or `(array-create size-expr)`. If no type is specified, the default is 
-to create an array of bytes. 
+Example that creates a 10 element buffer caled data:
 
-Currently the following types can be used for the type field:
-
-| Type | 
-| ---  | 
-| type-char | 
-| type-byte | 
-| type-i32  |
-| type-u32  | 
-| type-float |
-| type-i64 | 
-| type-u64 |
-| type-double | 
-
----
-
-### array-size
-
-Returns the size of an array in number of elements. The form 
-of an `array-size` expression is `(array-size arr-expr)` where 
-arr-expr has to evaluate into an array. 
-
----
-
-### array-read
-
-Read one or many elements from an array. The form of
-an `array-read` expression is either `(array-read array-expr index-expr)`
-of `(array-read array-expr start-index-expr end-index-expr)` for reading a range
-of values into a list.
-
-Example that evaluates to the character l.
 ```clj
-(array-read "hello" 3)
+(define data (bufcreate 10))
 ```
-The next example reads a range values
+
+Use the buffer extensions to operate `data`.
+See the [VESC](https://github.com/vedderb/bldc/tree/master/lispBM#byte-arrays)
+lbm documentation for details on operations on buffers.
+
+---
+
+### buflen
+
+Returns the size of a buffer in number of bytes. The form
+of an `buflen` expression is `(buflen buf-expr)` where
+buf-expr has to evaluate into a buffer.
+
+---
+
+### bufget-[X]
+
+Read a value from a buffer. The contents of a buffer can be read
+as a sized integer or unsigned value using as many bytes from the buffer
+as the X portion of the function name implies. 
+The form of a bufget expression is `(bufget-[X] buf-expr ix-expr)` where
+`ix-expr` evaluates to a number indicating the byte position to start
+reading from.
+
+- `bufget-i8`
+- `bufget-i16`
+- `bufget-i24`
+- `bufget-i32`
+- `bufget-u8`
+- `bufget-u16`
+- `bufget-u24`
+- `bufget-u32`
+
+Example that reads an u8 from a buffer at position 1:
+
 ```clj
-(array-read "hello" 1 3)
+(define buf [1 2 3 4])
+
+(bufget-u8 buf 1)
 ```
-and results in the list `(\#e \#l \#l)`.
 
 ---
 
-### array-write
+### bufset-[X]
 
-The `array-write` function performs a destructive update
-of an array.
+The `bufset` functions performs a destructive updates to a buffer.
+The form of a `bufset` expression is `(bufset-[X] buf-expr ix-expr val-expr)`
+where `ix-expr` evaluates to a number indicating where in the buffer to
+start writing and `val-expr` is the value to write.
 
-Example that turns array "hello" into "heflo"
+
+- `bufset-i8`
+- `bufset-i16`
+- `bufset-i24`
+- `bufset-i32`
+- `bufset-u8`
+- `bufset-u16`
+- `bufset-u24`
+- `bufset-u32`
+
+Example that updates position 1 in a buffer:
+
 ```clj
-(array-write "hello" 2 \#f)
+
+(define buf [1 2 3 4])
+
+(bufset-u8 buf 1 100)
 ```
 
 ---
 
-### array-clear
+### bufclear
 
-Clears an array by writing zeroes to all locations.
+Clears an array by writing zeroes (or a value of choice) to all locations.
+The form of a `bufclear` expression is `(bufclear buf-expr opt-val-expr)`.
 
-Example:
+Example that clears a buffer:
 
-```lisp
-(array-clear arr)
+```clj
+(bufclear buf)
+```
+
+Example that clears a buffer to all ones:
+
+```clj
+(bufclear buf 1)
 ```
 
 ---
 
+### Byte-array literal syntax
 
-### Array literal syntax
-
-Array literals can be created using the `[` and `]` syntax to enclose 
+Byte-array (buffer) literals can be created using the `[` and `]` syntax to enclose
 values to initialize the array with. The `[` and `]` syntax is complete
-resolved in the parser and thus cannot contain arbitrary lisp terms. 
-the values listed between the `[` and the `]` must be literals! 
+resolved in the parser and thus cannot contain arbitrary lisp terms.
+the values listed between the `[` and the `]` must be literals!
 
-The form of the `[` and `]` syntax is `[ type-qualifier val1 ... valN ]`
-or `[ val1 ... valN]`. If no type-qualifier is specified the default is 
-to create an array with byte values. 
+The form of the `[` and `]` syntax is `[ val1 ... valN ]`.
 
-The currently valid type qualifiers are:
-
-| Type qualifier | 
-| ---            | 
-| type-byte      |
-| type-i32       | 
-| type-u32       | 
-| type-float     | 
-
-(The rest of the numerical types will be supported in the future) 
-
-Example that creates a byte array 
-```lisp
+Example that creates a byte array
+```clj
 [ 1 2 3 4 5 6 7 8 9 10 ]
-```
-
-Example that create an array of i32 values
-```lisp
-[ type-i32 1 2 3 4 5 6 7 8 9 10 ]
 ```
 
 ---
@@ -1265,6 +1544,15 @@ For example the match expression below evaluates to 2.
        (orange 2)
        (blue 3))
 ```
+
+---
+
+### no_match
+
+The `no_match` symbol is returned from pattern matching if
+no case matches the expression.
+
+    - Add a catch-all case to your pattern-matching. `_`.
 
 ---
 
@@ -1299,42 +1587,21 @@ An example that evaluates to 19.
 
 ---
 
-### ?i
+### Match with guards
 
-The `?i` pattern matches an integer (28bit integer on 32bit platforms
-and a 56bit integer on 64bit platforms) and binds that value to a
-variable.  Using the ?i pattern is done as `(?i var)` and the part
-of the expression that matches is bound to the `var`.
+Patterns used in a match expressions can be augmented with a boolean
+guard to further discern between cases. A pattern with a guard is of the
+form `(pattern-expr guard-expr expr)`. A pattern with a guard, matches only
+if the pattern structurally matches and if the guard-expr evaluates to true
+in the match environment.
 
-The following example evaluates to `not-an-i`.
+Example:
 ```clj
-(match 3.14
-       ( (?i n) (+ n 1))
-       ( _ 'not-an-i))
-```
-The example below evaluates to 5.
-```clj
-(match 4
-       ( (?i n) (+ n 1))
-       ( _ 'not-an-i))
-```
-
-
----
-
-### ?u
-
-The `?u` pattern matches any unsigned and binds that value to a variable.
-Using the ?u pattern is done as `(?u var)` and the part of the expression
-that matches is bound to the `var`.
-
----
-
-### ?float
-
-The `?float` pattern matches any float and binds that value to a
-variable.  Using the `?float` pattern is done as `(?float var)` and
-the part of the expression that matches is bound to the `var`.
+(match (x)
+       ( (? y) (< y 0) 'less-than-zero)
+       ( (? y) (> y 0) 'greater-than-zero)
+       ( (? y) (= y 0) 'equal-to-zero))
+``` 
 
 ---
 
@@ -1343,28 +1610,63 @@ the part of the expression that matches is bound to the `var`.
 The concurrency support in LispBM is provided by the set of functions,
 `spawn`, `wait`, `yeild` and `atomic` described below.  Concurrency in
 LispBM is scheduled by a round-robin scheduler that splits the runtime
-system evaluator fairly (with caveats, below) between all running tasks.
+system evaluator fairly (with caveats, below) between all running processes.
 
-When a task is scheduled to run, made active, it is given a quota of
-evaluator "steps" to use up. The task then runs until that quota is
-exhausted or the task itself has signaled it wants to sleep by
+When a process is scheduled to run, made active, it is given a quota of
+evaluator "steps" to use up. The process then runs until that quota is
+exhausted or the process itself has signaled it wants to sleep by
 yielding or blocking (for example by waiting for a message using the
 message passing system).
 
-A task can also request to not be "pre-empted" while executing a
+A process can also request to not be "pre-empted" while executing a
 certain expression by invoking `atomic`. One should take care to make
 blocks of atomic code as small as possible as it disrupts the fairness
-of the scheduler. While executing inside of an atomic block the task
+of the scheduler. While executing inside of an atomic block the process
 has sole ownership of the shared global environment and can perform
 atomic read-modify-write sequences to global data.
 
 
 ### spawn
 
-Use `spawn` to launch a concurrent task. Spawn takes a closure and
-and arguments to pass to that closure as its arguments: `(spawn closure arg1 ... argN)`.
-Optionally you can provide a numerical first argument that specifies stack size
-that the runtime system should allocate to run the task in: `(spawn stack-size closure args1 ... argN)`.
+Use `spawn` to launch a concurrent process. Spawn takes a closure and
+and arguments to pass to that closure as its arguments: `(spawn
+closure arg1 ... argN)`.  Optionally you can provide a numerical first
+argument that specifies stack size that the runtime system should
+allocate to run the process in: `(spawn stack-size closure args1
+... argN)`.
+
+Each process has a runtime-stack which is used for the evaluation of
+expressions within that process. The stack size needed by a process
+depends on
+ 1. How deeply nested expressions evaluated by the process are.
+ 2. Number of recursive calls (Only if a function is NOT tail-recursive).
+ 3. The Number of arguments that functions called by the process take.
+
+Having a stack that is too small will result in a `out_of_stack` error.
+
+The default stack size is 256 words (1K Bytes) and should be more than
+enough for reasonable programs. Many processes will work perfectly
+fine with a lot less stack. You can find a good size by trial and error.
+
+---
+
+### spawn-trap
+
+Use `spawn-trap` to spawn a child process and enable trapping of exit
+conditions for that child. The form of a `spawn-trap` expression is
+`(spawn-trap closure arg1 .. argN)`.  If the child process is
+terminated because of an error, a message is sent to the parent
+process of the form `(exit-error tid err-val)`. If the child process
+terminates successfully a message of the form `(exit-ok tid value)` is
+sent to the parent.
+
+Example:
+```clj
+(spawn-trap my-thread)
+
+(recv  ((exit-error (? tid) (? e)) ...)
+       ((exit-ok    (? tid) (? v)) ...))
+```
 
 ---
 
@@ -1390,19 +1692,34 @@ is number indicating at least how many microseconds the process should sleep.
 
 ### atomic
 
-`atomic` can be used to execute a LispBM expression without allowing
-the runtime system to switch task during the time that takes.
+`atomic` can be used to execute a LispBM one or more expression without allowing
+the runtime system to switch process during that time.
 
-An example that atomically perfoms operations a,b and c. 
+An example that atomically perfoms operations a,b and c.
 
-```lisp
+```clj
 (atomic
-   (progn
      a
      b
-     c))
+     c)
 ```
+---
 
+### exit-ok
+
+The `exit-ok` function terminates the thread in a "successful" way and returnes a result
+specified by the programmer. The form of an `exit-ok` expression is `(exit-ok value)`.
+If the process that calls `exit-ok` was created using `spawn-trap` a message of the form
+`(exit-ok tid value)` is be sent to the parent of this process.
+
+---
+
+### exit-error
+
+The `exit-error` function terminates the thread with an error specified by the programmer.
+The form of an `exit-error` expression is `(exit-error err_val)`. If the process that
+calls `exit-error` was created using `spawn-trap` a message of the form
+`(exit-error tid err_val)` is sent to the parent of this process.
 
 ---
 
@@ -1428,6 +1745,17 @@ Example where a process waits for an integer `?i`.
 (recv ( (?i n) (+ n 1) ))
 ```
 
+---
+
+### set-mailbox-size
+
+Change the size of the mailbox in the current process.
+Standard mailbox size is 10 elements.
+
+Example that changes mailbox size to 100 elements.
+```clj
+(set-mailbox-size 100)
+```
 
 ---
 
@@ -1513,20 +1841,29 @@ Below is an example that conditionally returns.
 
 ---
 
-## Unparsable symbols
+## Error handling
 
-Unparsable symbols cannot be written into a program. The unparsable symbols
-signals different kinds of error conditions that may point at something
-being wrong in the code (or that it is exhausting all resources).
+If an error occurs while evaluating a program, the process that runs
+that program is killed.  The result of the killed process is set to an
+error symbol indicating what went wrong.
 
-### no_match
+If the process was created using `spawn` (or equivalently, started by a
+issuing a command in the repl), the process dies and an error message
+is presented over the registered printing callback (dependent on how LispBM
+is integrated into your system). The `ctx_done_callback` is also called
+and performs other integration dependent tasks related to the shutting down
+of a process.
 
-The `no_match` symbol is returned from pattern matching if
-no case matches the expression. 
-
-    - Add a catch-all case to your pattern-matching. `_`. 
+If the process was created using `spawn-trap`, in addition to the
+above, a message is sent to the parent process (the process that
+executed the spawn-trap) containing information about the process that
+struck an error. See <a href="#spawn-trap">spawn-trap</a>.
+The parent process can now choose to restart the process that crashed
+or to take some other action.
 
 ---
+
+## Error Symbols
 
 ### read_error
 
@@ -1565,7 +1902,7 @@ but semantically nonsensical.
 ### out_of_memory
 
 The `out_of_memory` symbol is returned if the heap is full and running
-the garbage collector was not able to free any memory up. 
+the garbage collector was not able to free any memory up.
 
 The program you have written requires more memory.
 
@@ -1676,61 +2013,61 @@ A value with type `type-u` occupy 28bits on the 32 bit version of LBM and
 
 ---
 
-### type-stream
+### type-channel
 
 ---
 
-## Type convertion functions 
+## Type convertion functions
 
 ### to-byte
 
-Convert any numerical value to a byte. 
+Convert any numerical value to a byte.
 If the input is not a number the output of this function will be 0.
 
 ---
 
 ### to-i
 
-Convert a value of any numerical type to an integer. 
+Convert a value of any numerical type to an integer.
 The resulting integer is a 28bit value on 32bit platforms and 56 bits on 64 bit platforms.
 If the input is not a number the output of this function will be 0.
 
---- 
+---
 
-### to-u 
+### to-u
 
-Convert a value of any numerical type to an unsigned integer. 
+Convert a value of any numerical type to an unsigned integer.
 The resulting integer is a 28bit value on 32bit platforms and 56 bits on 64 bit platforms.
 If the input is not a number the output of this function will be 0.
 
---- 
+---
 
 ### to-i32
 
 Convert any numerical value to a 32bit int.
 If the input is not a number the output of this function will be 0.
 
---- 
+---
 
-### to-u32 
+### to-u32
 
 Convert any numerical value to a 32bit unsigned int.
 
---- 
+---
 
 ### to-float
 
 Convert any numerical value to a single precision floating point value.
 If the input is not a number the output of this function will be 0.
 
---- 
+---
 
 ### to-i64
 
 Convert any numerical value to a 64bit int.
 If the input is not a number the output of this function will be 0.
 
---- 
+---
 
 ### to-u64
 
@@ -1746,8 +2083,6 @@ If the input is not a number the output of this function will be 0.
 
 ---
 
-
-## Extensions reference
 
 
 

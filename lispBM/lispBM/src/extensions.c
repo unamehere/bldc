@@ -21,17 +21,19 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <eval_cps.h>
 
 #include "extensions.h"
 
 static lbm_uint ext_offset = EXTENSION_SYMBOLS_START;
 static lbm_uint ext_max    = 0;
+static lbm_uint ext_num    = 0;
 static extension_fptr *extension_table = NULL;
 
 lbm_value lbm_extensions_default(lbm_value *args, lbm_uint argn) {
   (void)args;
   (void)argn;
-  return lbm_enc_sym(SYM_EERROR);
+  return ENC_SYM_EERROR;
 }
 
 int lbm_extensions_init(extension_fptr *extension_storage, int extension_storage_size) {
@@ -47,6 +49,14 @@ int lbm_extensions_init(extension_fptr *extension_storage, int extension_storage
   ext_max = (lbm_uint)extension_storage_size;
 
   return 1;
+}
+
+lbm_uint lbm_get_max_extensions(void) {
+  return ext_max;
+}
+
+lbm_uint lbm_get_num_extensions(void) {
+  return ext_num;
 }
 
 extension_fptr lbm_get_extension(lbm_uint sym) {
@@ -84,7 +94,54 @@ bool lbm_add_extension(char *sym_str, extension_fptr ext) {
   if (ext_ix >= ext_max) {
       return false;
   }
+  ext_num = ext_ix + 1;
   extension_table[ext_ix] = ext;
   return true;
 }
 
+
+// Helpers for extension developers:
+
+static bool lbm_is_number_all(lbm_value *args, lbm_uint argn) {
+  for (lbm_uint i = 0;i < argn;i++) {
+    if (!lbm_is_number(args[i])) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool lbm_check_true_false(lbm_value v) {
+  bool res = lbm_is_symbol_true(v) || lbm_is_symbol_nil(v);
+  lbm_set_error_reason((char*)lbm_error_str_not_a_boolean);
+  return res;
+}
+
+bool lbm_check_number_all(lbm_value *args, lbm_uint argn) {
+  if (!lbm_is_number_all(args, argn)) {
+    lbm_set_error_reason((char*)lbm_error_str_no_number);
+    return false;
+  }
+  return true;
+}
+
+bool lbm_check_argn(lbm_uint argn, lbm_uint n) {
+  if (argn != n) {
+    lbm_set_error_reason((char*)lbm_error_str_num_args);
+    return false;
+  } else {
+    return true;
+  }
+}
+
+bool lbm_check_argn_number(lbm_value *args, lbm_uint argn, lbm_uint n) {
+  if (!lbm_is_number_all(args, argn)) {
+    lbm_set_error_reason((char*)lbm_error_str_no_number);
+    return false;
+  } else if (argn != n) {
+    lbm_set_error_reason((char*)lbm_error_str_num_args);
+    return false;
+  } else {
+    return true;
+  }
+}

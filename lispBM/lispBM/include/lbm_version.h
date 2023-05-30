@@ -1,5 +1,5 @@
 /*
-    Copyright 2022 Joel Svensson  svenssonjoel@yahoo.se
+    Copyright 2022, 2023 Joel Svensson  svenssonjoel@yahoo.se
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -27,12 +27,76 @@ extern "C" {
 /** LBM major version */
 #define LBM_MAJOR_VERSION 0
 /** LBM minor version */
-#define LBM_MINOR_VERSION 6
+#define LBM_MINOR_VERSION 13
 /** LBM patch revision */
 #define LBM_PATCH_VERSION 0
 
 /*! \page changelog Changelog
-Set 16 2022: Version 0.6.0
+
+MAJ 5 2023: Version 0.13.0
+  - Changed behavior of closure application to zero args. Used to be equivalent
+    to application to nil.
+  - Removed make-env and in-env.
+  - Refactoring for readability. allocate_closure in eval_cps.
+
+APR 30 2023: Version 0.12.0
+  - added make-env and in-env for a kind of namespace management.
+  - Deeply nested errors are resolved using longjmp.
+
+Apr 4 2023: Version 0.11.0
+  - Incremental read evaluates expressions as soon as possible while reading.
+  - move-to-flash for storing constant parts of program in flash.
+  - All arrays are now byte-arrays. [type-X 1 2 3]-syntax removed.
+
+Mar 19 2023: Version 0.10.0
+  - Added deconstructive let bindings with optional dont-care fields.
+  - Added (var x (....)) for local bindings in progn.
+  - Added setq
+  - Curly brackets { .... } syntax as sugar over progn.
+
+Feb 18 2023: Version 0.9.0
+  - Arrays in flat_value are stored verbatim, not as ptr.
+  - Mutex locking granularity changed in multiple places.
+
+Feb 10 2023: Version 0.8.1
+  - Flat representation of heap values added.
+  - Added queue locking to GC
+  - As an experiment blocked contexts are unblocked by the evaluator in a safe state.
+
+Jan 28 2023: Version 0.8.0
+  - Changed return value of define from being the bound symbol to
+    being the value.
+  - Many of the more general extensions from Benjamin's BLDC repository
+    has moved into the LispBM source code.
+
+Dec 11: Version 0.7.1
+  - Changes to heap_allocate_cell for readability and perhaps performance.
+  - Added heap_allocate_list for allocation of multiple cells at once.
+
+Nov 9: Version 0.7.1
+  - Bugfix: string literal lengths.
+  - not-eq and != added.
+  - Corrected behaviour for eval when applied to no argument.
+  - lbm_memory operations are protected by mutex.
+  - Fixes to eval-program.
+  - Added multiple condition conditional function called cond.
+
+Oct 31: Version 0.7.1
+  - Added optional boolean guards to pattern matches.
+  - Built in map and reverse.
+
+Oct 16: Version 0.7.0
+  - Refactoring for evaluation speed.
+  - Removed possibility to step through code.
+  - Oldest message is removed on mailbox full.
+  - Added spawn-trap inspired by Erlang (but simplified).
+
+Sep 25: Version 0.7.0
+  - Removed namespaces (they were too restricted).
+  - Mailboxes are now stored in arrays of default size 10 mails.
+    Mailbox size can be changed using set-mailbox-size.
+
+Sep 16 2022: Version 0.6.0
   - Source code can be streamed onto the heap. This means there is no need
     for a large buffer on the MCU (or area of flash) to parse source code
     from

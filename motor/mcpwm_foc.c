@@ -691,7 +691,7 @@ void mcpwm_foc_stop_pwm(bool is_second_motor) {
  * stop the motor.
  *
  * @param dutyCycle
- * The duty cycle to use.
+ * The duty cycle to use
  */
 void mcpwm_foc_set_duty(float dutyCycle) {
 	get_motor_now()->m_control_mode = CONTROL_MODE_DUTY;
@@ -729,22 +729,25 @@ void mcpwm_foc_set_duty_noramp(float dutyCycle) {
  * The electrical RPM goal value to use.
  */
 void mcpwm_foc_set_pid_speed(float rpm) {
-	if (get_motor_now()->m_conf->s_pid_ramp_erpms_s > 0.0 ) {
-		if (get_motor_now()->m_control_mode != CONTROL_MODE_SPEED ||
-				get_motor_now()->m_state != MC_STATE_RUNNING) {
-			get_motor_now()->m_speed_pid_set_rpm = mcpwm_foc_get_rpm();
+	volatile motor_all_state_t *motor = get_motor_now();
+
+	if (motor->m_conf->s_pid_ramp_erpms_s > 0.0 ) {
+		if (motor->m_control_mode != CONTROL_MODE_SPEED ||
+				motor->m_state != MC_STATE_RUNNING) {
+			motor->m_speed_pid_set_rpm = mcpwm_foc_get_rpm();
 		}
 
-		get_motor_now()->m_speed_command_rpm = rpm;
+		motor->m_speed_command_rpm = rpm;
 	} else {
-		get_motor_now()->m_speed_pid_set_rpm = rpm;
+		motor->m_speed_pid_set_rpm = rpm;
 	}
 
-	get_motor_now()->m_control_mode = CONTROL_MODE_SPEED;
+	motor->m_control_mode = CONTROL_MODE_SPEED;
 
-	if (get_motor_now()->m_state != MC_STATE_RUNNING) {
-		get_motor_now()->m_motor_released = false;
-		get_motor_now()->m_state = MC_STATE_RUNNING;
+	if (motor->m_state != MC_STATE_RUNNING &&
+			fabsf(rpm) >= motor->m_conf->s_pid_min_erpm) {
+		motor->m_motor_released = false;
+		motor->m_state = MC_STATE_RUNNING;
 #ifdef USE_SKAI_ENABLE
 		skai3_start_up();
 #endif
@@ -757,6 +760,7 @@ void mcpwm_foc_set_pid_speed(float rpm) {
  *
  * @param pos
  * The desired position of the motor in degrees.
+
  */
 void mcpwm_foc_set_pid_pos(float pos) {
 	get_motor_now()->m_control_mode = CONTROL_MODE_POS;
@@ -860,13 +864,9 @@ void mcpwm_foc_set_handbrake(float current) {
  *
  * @param rpm
  * The RPM to use.
+ *
  */
-void mcpwm_foc_set_openloop(float current, float rpm) {
-	// Check for an active fault
-	if (mc_interface_get_fault() != FAULT_CODE_NONE) {
-		return;
-	}
-	
+void mcpwm_foc_set_openloop_current(float current, float rpm) {
 	utils_truncate_number(&current, -get_motor_now()->m_conf->l_current_max * get_motor_now()->m_conf->l_current_max_scale,
 						  get_motor_now()->m_conf->l_current_max * get_motor_now()->m_conf->l_current_max_scale);
 
@@ -897,11 +897,6 @@ void mcpwm_foc_set_openloop(float current, float rpm) {
  * The phase to use in degrees, range [0.0 360.0]
  */
 void mcpwm_foc_set_openloop_phase(float current, float phase) {
-	// Check for an active fault
-	if (mc_interface_get_fault() != FAULT_CODE_NONE) {
-		return;
-	}
-	
 	utils_truncate_number(&current, -get_motor_now()->m_conf->l_current_max * get_motor_now()->m_conf->l_current_max_scale,
 						  get_motor_now()->m_conf->l_current_max * get_motor_now()->m_conf->l_current_max_scale);
 
@@ -976,6 +971,17 @@ void mcpwm_foc_get_voltage_offsets_undriven(
 	*v2_offset = motor->m_conf->foc_offsets_voltage_undriven[2];
 }
 
+void mcpwm_foc_get_currents_adc(
+		float *ph0,
+		float *ph1,
+		float *ph2,
+		bool is_second_motor) {
+	volatile motor_all_state_t *motor = M_MOTOR(is_second_motor);
+	*ph0 = motor->m_currents_adc[0];
+	*ph1 = motor->m_currents_adc[1];
+	*ph2 = motor->m_currents_adc[2];
+}
+
 /**
  * Produce an openloop rotating voltage.
  *
@@ -986,11 +992,6 @@ void mcpwm_foc_get_voltage_offsets_undriven(
  * The RPM to use.
  */
 void mcpwm_foc_set_openloop_duty(float dutyCycle, float rpm) {
-	// Check for an active fault
-	if (mc_interface_get_fault() != FAULT_CODE_NONE) {
-		return;
-	}
-	
 	get_motor_now()->m_control_mode = CONTROL_MODE_OPENLOOP_DUTY;
 	get_motor_now()->m_duty_cycle_set = dutyCycle;
 	get_motor_now()->m_openloop_speed = RPM2RADPS_f(rpm);
@@ -1011,11 +1012,6 @@ void mcpwm_foc_set_openloop_duty(float dutyCycle, float rpm) {
  * The phase to use in degrees, range [0.0 360.0]
  */
 void mcpwm_foc_set_openloop_duty_phase(float dutyCycle, float phase) {
-	// Check for an active fault
-	if (mc_interface_get_fault() != FAULT_CODE_NONE) {
-		return;
-	}
-	
 	get_motor_now()->m_control_mode = CONTROL_MODE_OPENLOOP_DUTY_PHASE;
 	get_motor_now()->m_duty_cycle_set = dutyCycle;
 	get_motor_now()->m_openloop_phase = DEG2RAD_f(phase);
@@ -1277,6 +1273,26 @@ float mcpwm_foc_get_iq(void) {
 }
 
 /**
+ * Get the filtered direct axis motor current.
+ *
+ * @return
+ * The D axis current.
+ */
+float mcpwm_foc_get_id_filter(void) {
+	return get_motor_now()->m_motor_state.id_filter;
+}
+
+/**
+ * Get the filtered quadrature axis motor current.
+ *
+ * @return
+ * The Q axis current.
+ */
+float mcpwm_foc_get_iq_filter(void) {
+	return get_motor_now()->m_motor_state.iq_filter;
+}
+
+/**
  * Get the input current to the motor controller.
  *
  * @return
@@ -1414,6 +1430,21 @@ float mcpwm_foc_get_mod_beta_measured(void) {
 	return get_motor_now()->m_motor_state.mod_beta_measured;
 }
 
+float mcpwm_foc_get_est_lambda(void) {
+	return get_motor_now()->m_observer_state.lambda_est;
+}
+
+float mcpwm_foc_get_est_res(void) {
+	return get_motor_now()->m_res_est;
+}
+
+// NOTE: Requires the regular HFI sensor mode to run
+float mcpwm_foc_get_est_ind(void) {
+	float real_bin0, imag_bin0;
+	get_motor_now()->m_hfi.fft_bin0_func((float*)get_motor_now()->m_hfi.buffer, &real_bin0, &imag_bin0);
+	return real_bin0;
+}
+
 /**
  * Measure encoder offset and direction.
  *
@@ -1436,8 +1467,12 @@ float mcpwm_foc_get_mod_beta_measured(void) {
  * @param inverted
  * Is set to true if the encoder reports an increase in angle in the opposite
  * direction of the motor.
+ *
+ * @return
+ * The fault code
  */
-void mcpwm_foc_encoder_detect(float current, bool print, float *offset, float *ratio, bool *inverted) {
+int mcpwm_foc_encoder_detect(float current, bool print, float *offset, float *ratio, bool *inverted) {
+	int fault = FAULT_CODE_NONE;
 	mc_interface_lock();
 
 	volatile motor_all_state_t *motor = get_motor_now();
@@ -1472,6 +1507,10 @@ void mcpwm_foc_encoder_detect(float current, bool print, float *offset, float *r
 	while(!encoder_index_found()) {
 		for (float i = 0.0;i < 2.0 * M_PI;i += (2.0 * M_PI) / 500.0) {
 			motor->m_phase_now_override = i;
+			fault = mc_interface_get_fault();
+			if (fault != FAULT_CODE_NONE) {
+				goto exit_encoder_detect;
+			}
 			chThdSleepMilliseconds(1);
 		}
 
@@ -1489,6 +1528,10 @@ void mcpwm_foc_encoder_detect(float current, bool print, float *offset, float *r
 	// Rotate
 	for (float i = 0.0;i < 2.0 * M_PI;i += (2.0 * M_PI) / 500.0) {
 		motor->m_phase_now_override = i;
+		fault = mc_interface_get_fault();
+		if (fault != FAULT_CODE_NONE) {
+			goto exit_encoder_detect;
+		}
 		chThdSleepMilliseconds(1);
 	}
 
@@ -1508,10 +1551,15 @@ void mcpwm_foc_encoder_detect(float current, bool print, float *offset, float *r
 		float phase_old = motor->m_phase_now_encoder;
 		float phase_ovr_tmp = motor->m_phase_now_override;
 		for (float j = phase_ovr_tmp; j < phase_ovr_tmp + (2.0 / 3.0) * M_PI;
-				j += (2.0 * M_PI) / 500.0) {
+			 j += (2.0 * M_PI) / 500.0) {
 			motor->m_phase_now_override = j;
+			fault = mc_interface_get_fault();
+			if (fault != FAULT_CODE_NONE) {
+				goto exit_encoder_detect;
+			}
 			chThdSleepMilliseconds(1);
 		}
+
 		utils_norm_angle_rad((float*)&motor->m_phase_now_override);
 		chThdSleepMilliseconds(300);
 		timeout_reset();
@@ -1536,9 +1584,12 @@ void mcpwm_foc_encoder_detect(float current, bool print, float *offset, float *r
 	for (int i = 0; i < it_rat; i++) {
 		float phase_old = motor->m_phase_now_encoder;
 		float phase_ovr_tmp = motor->m_phase_now_override;
-		for (float j = phase_ovr_tmp; j > phase_ovr_tmp - (2.0 / 3.0) * M_PI;
-				j -= (2.0 * M_PI) / 500.0) {
+		for (float j = phase_ovr_tmp; j > phase_ovr_tmp - (2.0 / 3.0) * M_PI; j -= (2.0 * M_PI) / 500.0) {
 			motor->m_phase_now_override = j;
+			fault = mc_interface_get_fault();
+			if (fault != FAULT_CODE_NONE) {
+				goto exit_encoder_detect;
+			}
 			chThdSleepMilliseconds(1);
 		}
 		utils_norm_angle_rad((float*)&motor->m_phase_now_override);
@@ -1575,6 +1626,10 @@ void mcpwm_foc_encoder_detect(float current, bool print, float *offset, float *r
 	// Rotate
 	for (float i = motor->m_phase_now_override;i < 2.0 * M_PI;i += (2.0 * M_PI) / 500.0) {
 		motor->m_phase_now_override = i;
+		fault = mc_interface_get_fault();
+		if (fault != FAULT_CODE_NONE) {
+			goto exit_encoder_detect;
+		}
 		chThdSleepMilliseconds(2);
 	}
 
@@ -1593,6 +1648,10 @@ void mcpwm_foc_encoder_detect(float current, bool print, float *offset, float *r
 
 		while (motor->m_phase_now_override != override) {
 			utils_step_towards((float*)&motor->m_phase_now_override, override, step / 100.0);
+			fault = mc_interface_get_fault();
+			if (fault != FAULT_CODE_NONE) {
+				goto exit_encoder_detect;
+			}
 			chThdSleepMilliseconds(4);
 		}
 
@@ -1616,6 +1675,10 @@ void mcpwm_foc_encoder_detect(float current, bool print, float *offset, float *r
 
 		while (motor->m_phase_now_override != override) {
 			utils_step_towards((float*)&motor->m_phase_now_override, override, step / 100.0);
+			fault = mc_interface_get_fault();
+			if (fault != FAULT_CODE_NONE) {
+				goto exit_encoder_detect;
+			}
 			chThdSleepMilliseconds(4);
 		}
 
@@ -1645,6 +1708,7 @@ void mcpwm_foc_encoder_detect(float current, bool print, float *offset, float *r
 		commands_printf("Offset detected");
 	}
 
+	exit_encoder_detect:
 	motor->m_id_set = 0.0;
 	motor->m_iq_set = 0.0;
 	motor->m_phase_override = false;
@@ -1662,6 +1726,7 @@ void mcpwm_foc_encoder_detect(float current, bool print, float *offset, float *r
 	timeout_configure(tout, tout_c, tout_ksw);
 
 	mc_interface_unlock();
+	return fault;
 }
 
 /**
@@ -1679,15 +1744,19 @@ void mcpwm_foc_encoder_detect(float current, bool print, float *offset, float *r
  * still be applied after returning. Setting this to false is useful if you want
  * to run this function again right away, without stopping the motor in between.
  *
+ * @param resistance
+ * The calculated motor resistance
+ *
  * @return
- * The calculated motor resistance.
+ * The fault code.
  */
-float mcpwm_foc_measure_resistance(float current, int samples, bool stop_after) {
+int mcpwm_foc_measure_resistance(float current, int samples, bool stop_after, float *resistance) {
 	mc_interface_lock();
 #ifdef USE_SKAI_ENABLE
 		skai3_start_up();
 #endif
 	volatile motor_all_state_t *motor = get_motor_now();
+	int fault = FAULT_CODE_NONE;
 
 	motor->m_phase_override = true;
 	motor->m_phase_now_override = 0.0;
@@ -1705,8 +1774,9 @@ float mcpwm_foc_measure_resistance(float current, int samples, bool stop_after) 
 
 	// Ramp up the current slowly
 	while (fabsf(motor->m_iq_set - current) > 0.001) {
-		utils_step_towards((float*)&motor->m_iq_set, current, fabsf(current) / 500.0);		
-		if (mc_interface_get_fault() != FAULT_CODE_NONE) {
+		utils_step_towards((float*)&motor->m_iq_set, current, fabsf(current) / 200.0);
+		fault = mc_interface_get_fault();
+		if (fault != FAULT_CODE_NONE) {
 			motor->m_id_set = 0.0;
 			motor->m_iq_set = 0.0;
 			motor->m_phase_override = false;
@@ -1717,13 +1787,13 @@ float mcpwm_foc_measure_resistance(float current, int samples, bool stop_after) 
 			timeout_configure(tout, tout_c, tout_ksw);
 			mc_interface_unlock();
 
-			return 0.0;
+			return fault;
 		}
 		chThdSleepMilliseconds(1);
 	}
 
 	// Wait for the current to rise and the motor to lock.
-	chThdSleepMilliseconds(100);
+	chThdSleepMilliseconds(50);
 
 	// Sample
 	motor->m_samples.avg_current_tot = 0.0;
@@ -1738,8 +1808,8 @@ float mcpwm_foc_measure_resistance(float current, int samples, bool stop_after) 
 		if (cnt > 10000) {
 			break;
 		}
-
-		if (mc_interface_get_fault() != FAULT_CODE_NONE) {
+		fault = mc_interface_get_fault();
+		if (fault != FAULT_CODE_NONE) {
 			motor->m_id_set = 0.0;
 			motor->m_iq_set = 0.0;
 			motor->m_phase_override = false;
@@ -1750,7 +1820,7 @@ float mcpwm_foc_measure_resistance(float current, int samples, bool stop_after) 
 			timeout_configure(tout, tout_c, tout_ksw);
 			mc_interface_unlock();
 
-			return 0.0;
+			return fault;
 		}
 	}
 
@@ -1771,7 +1841,9 @@ float mcpwm_foc_measure_resistance(float current, int samples, bool stop_after) 
 	timeout_configure(tout, tout_c, tout_ksw);
 	mc_interface_unlock();
 
-	return voltage_avg / current_avg;
+	*resistance = voltage_avg / current_avg;
+
+	return fault;
 }
 
 /**
@@ -1786,11 +1858,15 @@ float mcpwm_foc_measure_resistance(float current, int samples, bool stop_after) 
  * @param
  * The current that was used for this measurement.
  *
- * @return
+ * @inductance
  * The average d and q axis inductance in uH.
+ *
+ * @return
+ * The fault code
  */
-float mcpwm_foc_measure_inductance(float duty, int samples, float *curr, float *ld_lq_diff) {
+int mcpwm_foc_measure_inductance(float duty, int samples, float *curr, float *ld_lq_diff, float *inductance) {
 	volatile motor_all_state_t *motor = get_motor_now();
+	int fault = FAULT_CODE_NONE;
 #ifdef USE_SKAI_ENABLE
 		skai3_start_up();
 #endif
@@ -1850,7 +1926,11 @@ float mcpwm_foc_measure_inductance(float duty, int samples, float *curr, float *
 	float iterations = 0.0;
 
 	for (int i = 0;i < (samples / 10);i++) {
-		if (mc_interface_get_fault() != FAULT_CODE_NONE) {
+		timeout_reset();
+		mcpwm_foc_set_duty(0.0);
+
+		fault = mc_interface_get_fault();
+		if (fault != FAULT_CODE_NONE) {
 			motor->m_id_set = 0.0;
 			motor->m_iq_set = 0.0;
 			motor->m_control_mode = CONTROL_MODE_NONE;
@@ -1871,11 +1951,9 @@ float mcpwm_foc_measure_inductance(float duty, int samples, float *curr, float *
 
 			mc_interface_unlock();
 
-			return 0.0;
+			return fault;
 		}
 
-		timeout_reset();
-		mcpwm_foc_set_duty(0.0);
 		chThdSleepMilliseconds(10);
 
 		float real_bin0, imag_bin0;
@@ -1927,7 +2005,8 @@ float mcpwm_foc_measure_inductance(float duty, int samples, float *curr, float *
 		*ld_lq_diff = (ld_lq_diff_sum / iterations) * 1e6 * ind_scale_factor;
 	}
 
-	return (l_sum / iterations) * 1e6 * ind_scale_factor;
+	*inductance = (l_sum / iterations) * 1e6 * ind_scale_factor;
+	return fault;
 }
 
 /**
@@ -1944,15 +2023,21 @@ float mcpwm_foc_measure_inductance(float duty, int samples, float *curr, float *
  * @param *curr
  * The current that was used for this measurement.
  *
- * @return
+ * @inductance
  * The average d and q axis inductance in uH.
+ *
+ * @return
+ * The fault code
  */
-float mcpwm_foc_measure_inductance_current(float curr_goal, int samples, float *curr, float *ld_lq_diff) {
+int mcpwm_foc_measure_inductance_current(float curr_goal, int samples, float *curr, float *ld_lq_diff, float *inductance) {
+	int fault = FAULT_CODE_NONE;
 	float duty_last = 0.0;
 	for (float i = 0.02;i < 0.5;i *= 1.5) {
+		utils_truncate_number_abs(&i, 0.6);
 		float i_tmp;
-		if (mcpwm_foc_measure_inductance(i, 10, &i_tmp, 0) == 0.0) {
-			return 0.0;
+		fault = mcpwm_foc_measure_inductance(i, 10, &i_tmp, 0, 0);
+		if (fault != FAULT_CODE_NONE) {
+			return fault;
 		}
 
 		duty_last = i;
@@ -1960,9 +2045,8 @@ float mcpwm_foc_measure_inductance_current(float curr_goal, int samples, float *
 			break;
 		}
 	}
-
-	float ind = mcpwm_foc_measure_inductance(duty_last, samples, curr, ld_lq_diff);
-	return ind;
+	fault = mcpwm_foc_measure_inductance(duty_last, samples, curr, ld_lq_diff, inductance);
+	return fault;
 }
 
 bool mcpwm_foc_beep(float freq, float time, float voltage) {
@@ -2050,11 +2134,11 @@ bool mcpwm_foc_beep(float freq, float time, float voltage) {
  * The measured difference in D axis and Q axis inductance.
  *
  * @return
- * True if the measurement succeeded, false otherwise.
+ * The fault code
  */
-bool mcpwm_foc_measure_res_ind(float *res, float *ind, float *ld_lq_diff) {
+int mcpwm_foc_measure_res_ind(float *res, float *ind, float *ld_lq_diff) {
 	volatile motor_all_state_t *motor = get_motor_now();
-	bool result = false;
+	int fault = FAULT_CODE_NONE;
 #ifdef USE_SKAI_ENABLE
 		skai3_start_up();
 #endif
@@ -2068,11 +2152,10 @@ bool mcpwm_foc_measure_res_ind(float *res, float *ind, float *ld_lq_diff) {
 
 	float i_last = 0.0;
 	for (float i = 2.0;i < (motor->m_conf->l_current_max / 2.0);i *= 1.5) {
-		float r_tmp = mcpwm_foc_measure_resistance(i, 20, false);
-		if (r_tmp == 0.0) {
-			motor->m_conf->foc_current_kp = kp_old;
-			motor->m_conf->foc_current_ki = ki_old;
-			return false;
+		float r_tmp = 0.0;
+		fault = mcpwm_foc_measure_resistance(i, 20, false, &r_tmp);
+		if (fault != FAULT_CODE_NONE || r_tmp == 0.0) {
+			goto exit_measure_res_ind;
 		}
 		if (i > (1.0 / r_tmp)) {
 			i_last = i;
@@ -2088,20 +2171,19 @@ bool mcpwm_foc_measure_res_ind(float *res, float *ind, float *ld_lq_diff) {
 	i_last = (motor->m_conf->l_current_max / 2.0);
 #endif
 
-	*res = mcpwm_foc_measure_resistance(i_last, 200, true);
-	if (*res != 0.0) {
+	fault = mcpwm_foc_measure_resistance(i_last, 200, true, res);
+	if (fault == FAULT_CODE_NONE && *res != 0.0) {
 		motor->m_conf->foc_motor_r = *res;
-		*ind = mcpwm_foc_measure_inductance_current(i_last, 200, 0, ld_lq_diff);
-		if (*ind != 0.0) {
-			result = true;
-		}
+		mcpwm_foc_set_current(0.0);
+		chThdSleepMilliseconds(10);
+		fault = mcpwm_foc_measure_inductance_current(i_last, 200, 0, ld_lq_diff, ind);
 	}
 
+	exit_measure_res_ind:
 	motor->m_conf->foc_current_kp = kp_old;
 	motor->m_conf->foc_current_ki = ki_old;
 	motor->m_conf->foc_motor_r = res_old;
-
-	return result;
+	return fault;
 }
 
 /**
@@ -2113,13 +2195,16 @@ bool mcpwm_foc_measure_res_ind(float *res, float *ind, float *ld_lq_diff) {
  * @param hall_table
  * Table to store the result to.
  *
- * @return
+ * @result
  * true: Success
  * false: Something went wrong
+ *
+ * @return
+ * The fault code
  */
-bool mcpwm_foc_hall_detect(float current, uint8_t *hall_table) {
+int mcpwm_foc_hall_detect(float current, uint8_t *hall_table, bool *result) {
 	volatile motor_all_state_t *motor = get_motor_now();
-
+	int fault = FAULT_CODE_NONE;
 	mc_interface_lock();
 #ifdef USE_SKAI_ENABLE
 		skai3_start_up();
@@ -2145,8 +2230,14 @@ bool mcpwm_foc_hall_detect(float current, uint8_t *hall_table) {
 	// Lock the motor
 	motor->m_phase_now_override = 0;
 
+	*result = false;
+
 	for (int i = 0;i < 1000;i++) {
 		motor->m_id_set = (float)i * current / 1000.0;
+		fault = mc_interface_get_fault();
+		if (fault != FAULT_CODE_NONE) {
+			goto exit_hall_detect;
+		}
 		chThdSleepMilliseconds(1);
 	}
 
@@ -2161,6 +2252,10 @@ bool mcpwm_foc_hall_detect(float current, uint8_t *hall_table) {
 	for (int i = 0;i < 3;i++) {
 		for (int j = 0;j < 360;j++) {
 			motor->m_phase_now_override = DEG2RAD_f(j);
+			fault = mc_interface_get_fault();
+			if (fault != FAULT_CODE_NONE) {
+				goto exit_hall_detect;
+			}
 			chThdSleepMilliseconds(5);
 
 			int hall = utils_read_hall(motor != &m_motor_1, motor->m_conf->m_hall_extra_samples);
@@ -2176,6 +2271,10 @@ bool mcpwm_foc_hall_detect(float current, uint8_t *hall_table) {
 	for (int i = 0;i < 3;i++) {
 		for (int j = 360;j >= 0;j--) {
 			motor->m_phase_now_override = DEG2RAD_f(j);
+			fault = mc_interface_get_fault();
+			if (fault != FAULT_CODE_NONE) {
+				goto exit_hall_detect;
+			}
 			chThdSleepMilliseconds(5);
 
 			int hall = utils_read_hall(motor != &m_motor_1, motor->m_conf->m_hall_extra_samples);
@@ -2186,18 +2285,6 @@ bool mcpwm_foc_hall_detect(float current, uint8_t *hall_table) {
 			hall_iterations[hall]++;
 		}
 	}
-
-	motor->m_id_set = 0.0;
-	motor->m_iq_set = 0.0;
-	motor->m_phase_override = false;
-	motor->m_control_mode = CONTROL_MODE_NONE;
-	motor->m_state = MC_STATE_OFF;
-	stop_pwm_hw((motor_all_state_t*)motor);
-
-	motor->m_conf->foc_mtpa_mode = mtpa_old;
-
-	// Enable timeout
-	timeout_configure(tout, tout_c, tout_ksw);
 
 	int fails = 0;
 	for(int i = 0;i < 8;i++) {
@@ -2210,10 +2297,20 @@ bool mcpwm_foc_hall_detect(float current, uint8_t *hall_table) {
 			fails++;
 		}
 	}
+	*result = (fails == 2);
 
+	exit_hall_detect:
+	motor->m_id_set = 0.0;
+	motor->m_iq_set = 0.0;
+	motor->m_phase_override = false;
+	motor->m_control_mode = CONTROL_MODE_NONE;
+	motor->m_state = MC_STATE_OFF;
+	stop_pwm_hw((motor_all_state_t*)motor);
+	motor->m_conf->foc_mtpa_mode = mtpa_old;
+	timeout_configure(tout, tout_c, tout_ksw);
 	mc_interface_unlock();
 
-	return fails == 2;
+	return fault;
 }
 
 /**
@@ -2463,7 +2560,7 @@ void mcpwm_foc_print_state(void) {
 	commands_printf("i_abs_flt: %.2f", (double)get_motor_now()->m_motor_state.i_abs_filter);
 	commands_printf("Obs_x1:    %.2f", (double)get_motor_now()->m_observer_state.x1);
 	commands_printf("Obs_x2:    %.2f", (double)get_motor_now()->m_observer_state.x2);
-	commands_printf("lambda_est:%.2f", (double)get_motor_now()->m_observer_state.lambda_est);
+	commands_printf("lambda_est:%.4f", (double)get_motor_now()->m_observer_state.lambda_est);
 	commands_printf("vd_int:    %.2f", (double)get_motor_now()->m_motor_state.vd_int);
 	commands_printf("vq_int:    %.2f", (double)get_motor_now()->m_motor_state.vq_int);
 	commands_printf("off_delay: %.2f", (double)get_motor_now()->m_current_off_delay);
@@ -2530,17 +2627,17 @@ void mcpwm_foc_adc_int_handler(void *p, uint32_t flags) {
 		float curr1;
 
 		if (is_second_motor) {
-			curr0 = ((float)GET_CURRENT1() - conf_other->foc_offsets_current[0]) * FAC_CURRENT;
-			curr1 = ((float)GET_CURRENT2() - conf_other->foc_offsets_current[1]) * FAC_CURRENT;
+			curr0 = (GET_CURRENT1() - conf_other->foc_offsets_current[0]) * FAC_CURRENT;
+			curr1 = (GET_CURRENT2() - conf_other->foc_offsets_current[1]) * FAC_CURRENT;
 			TIMER_UPDATE_DUTY_M1(motor_other->m_duty1_next, motor_other->m_duty2_next, motor_other->m_duty3_next);
 		} else {
-			curr0 = ((float)GET_CURRENT1_M2() - conf_other->foc_offsets_current[0]) * FAC_CURRENT;
-			curr1 = ((float)GET_CURRENT2_M2() - conf_other->foc_offsets_current[1]) * FAC_CURRENT;
+			curr0 = (GET_CURRENT1_M2() - conf_other->foc_offsets_current[0]) * FAC_CURRENT;
+			curr1 = (GET_CURRENT2_M2() - conf_other->foc_offsets_current[1]) * FAC_CURRENT;
 			TIMER_UPDATE_DUTY_M2(motor_other->m_duty1_next, motor_other->m_duty2_next, motor_other->m_duty3_next);
 		}
 #else
-		float curr0 = ((float)GET_CURRENT1() - conf_other->foc_offsets_current[0]) * FAC_CURRENT;
-		float curr1 = ((float)GET_CURRENT2() - conf_other->foc_offsets_current[1]) * FAC_CURRENT;
+		float curr0 = (GET_CURRENT1() - conf_other->foc_offsets_current[0]) * FAC_CURRENT;
+		float curr1 = (GET_CURRENT2() - conf_other->foc_offsets_current[1]) * FAC_CURRENT;
 
 		TIMER_UPDATE_DUTY_M1(motor_other->m_duty1_next, motor_other->m_duty2_next, motor_other->m_duty3_next);
 #ifdef HW_HAS_DUAL_PARALLEL
@@ -2822,13 +2919,17 @@ void mcpwm_foc_adc_int_handler(void *p, uint32_t flags) {
 
 		if (!control_duty) {
 			motor_now->m_duty_i_term = motor_now->m_motor_state.iq / conf_now->lo_current_max;
+			motor_now->duty_was_pi = false;
 		}
 
 		if (control_duty) {
 			// Duty cycle control
-			if (fabsf(duty_set) < (duty_abs - 0.05) ||
-					(SIGN(motor_now->m_motor_state.vq) * motor_now->m_motor_state.iq) < conf_now->lo_current_min) {
-				// Truncating the duty cycle here would be dangerous, so run a PID controller.
+			if (fabsf(duty_set) < (duty_abs - 0.01) &&
+					(!motor_now->duty_was_pi || SIGN(motor_now->duty_pi_duty_last) == SIGN(duty_now))) {
+				// Truncating the duty cycle here would be dangerous, so run a PI controller.
+
+				motor_now->duty_pi_duty_last = duty_now;
+				motor_now->duty_was_pi = true;
 
 				// Reset the integrator in duty mode to not increase the duty if the load suddenly changes. In braking
 				// mode this would cause a discontinuity, so there we want to keep the value of the integrator.
@@ -2844,13 +2945,11 @@ void mcpwm_foc_adc_int_handler(void *p, uint32_t flags) {
 					}
 				}
 
-				// Compensation for supply voltage variations
-				float scale = 1.0 / motor_now->m_motor_state.v_bus;
-
 				// Compute error
 				float error = duty_set - motor_now->m_motor_state.duty_now;
 
 				// Compute parameters
+				float scale = 1.0 / motor_now->m_motor_state.v_bus;
 				float p_term = error * conf_now->foc_duty_dowmramp_kp * scale;
 				motor_now->m_duty_i_term += error * (conf_now->foc_duty_dowmramp_ki * dt) * scale;
 
@@ -2871,6 +2970,7 @@ void mcpwm_foc_adc_int_handler(void *p, uint32_t flags) {
 				} else {
 					iq_set_tmp = -conf_now->lo_current_max;
 				}
+				motor_now->duty_was_pi = false;
 			}
 		} else if (motor_now->m_control_mode == CONTROL_MODE_CURRENT_BRAKE) {
 			// Braking
@@ -3056,6 +3156,7 @@ void mcpwm_foc_adc_int_handler(void *p, uint32_t flags) {
 		motor_now->m_motor_state.iq = 0.0;
 		motor_now->m_motor_state.id_filter = 0.0;
 		motor_now->m_motor_state.iq_filter = 0.0;
+		motor_now->m_duty_i_term = 0.0;
 #ifdef HW_HAS_INPUT_CURRENT_SENSOR
 		GET_INPUT_CURRENT_OFFSET(); // TODO: should this be done here?
 #endif
@@ -3504,8 +3605,8 @@ static void timer_update(motor_all_state_t *motor, float dt) {
 	{
 		float res_est_gain = 0.00002;
 		float i_abs_sq = SQ(motor->m_motor_state.i_abs);
-		motor->m_r_est = motor->m_r_est_state - 0.5 * res_est_gain * conf_now->foc_motor_l * i_abs_sq;
-		float res_dot = -res_est_gain * (motor->m_r_est * i_abs_sq + motor->m_speed_est_fast *
+		motor->m_res_est = motor->m_r_est_state - 0.5 * res_est_gain * conf_now->foc_motor_l * i_abs_sq;
+		float res_dot = -res_est_gain * (motor->m_res_est * i_abs_sq + motor->m_speed_est_fast *
 				(motor->m_motor_state.i_beta * motor->m_observer_state.x1 - motor->m_motor_state.i_alpha * motor->m_observer_state.x2) -
 				(motor->m_motor_state.i_alpha * motor->m_motor_state.v_alpha + motor->m_motor_state.i_beta * motor->m_motor_state.v_beta));
 		motor->m_r_est_state += res_dot * dt;
@@ -3536,7 +3637,7 @@ static void terminal_tmp(int argc, const char **argv) {
 	}
 
 	for (int i = 0;i < top;i++) {
-		float res_est = m_motor_1.m_r_est;
+		float res_est = m_motor_1.m_res_est;
 		float t_base = m_motor_1.m_conf->foc_temp_comp_base_temp;
 		float res_base = m_motor_1.m_conf->foc_motor_r;
 		float t_est = (res_est / res_base - 1) / 0.00386 + t_base;
@@ -3890,7 +3991,7 @@ static void control_current(motor_all_state_t *motor, float dt) {
 	float max_duty = fabsf(state_m->max_duty);
 	utils_truncate_number(&max_duty, 0.0, conf_now->l_max_duty);
 
-    // Park transform: transforms the currents from stator to the rotor reference frame
+	// Park transform: transforms the currents from stator to the rotor reference frame
 	state_m->id = c * state_m->i_alpha + s * state_m->i_beta;
 	state_m->iq = c * state_m->i_beta  - s * state_m->i_alpha;
 
@@ -3930,9 +4031,9 @@ static void control_current(motor_all_state_t *motor, float dt) {
 
 	// Decoupling. Using feedforward this compensates for the fact that the equations of a PMSM
 	// are not really decoupled (the d axis current has impact on q axis voltage and visa-versa):
-    //      Resistance  Inductance   Cross terms   Back-EMF   (see www.mathworks.com/help/physmod/sps/ref/pmsm.html)
-    // vd = Rs*id   +   Ld*did/dt −  ωe*iq*Lq
-    // vq = Rs*iq   +   Lq*diq/dt +  ωe*id*Ld     + ωe*ψm
+	//      Resistance  Inductance   Cross terms   Back-EMF   (see www.mathworks.com/help/physmod/sps/ref/pmsm.html)
+	// vd = Rs*id   +   Ld*did/dt −  ωe*iq*Lq
+	// vq = Rs*iq   +   Lq*diq/dt +  ωe*id*Ld     + ωe*ψm
 	float dec_vd = 0.0;
 	float dec_vq = 0.0;
 	float dec_bemf = 0.0;
@@ -4000,13 +4101,13 @@ static void control_current(motor_all_state_t *motor, float dt) {
 	state_m->i_abs = NORM2_f(state_m->id, state_m->iq);
 	state_m->i_abs_filter = NORM2_f(state_m->id_filter, state_m->iq_filter);
 
-    // Inverse Park transform: transforms the (normalized) voltages from the rotor reference frame to the stator frame
+	// Inverse Park transform: transforms the (normalized) voltages from the rotor reference frame to the stator frame
 	state_m->mod_alpha_raw = c * state_m->mod_d - s * state_m->mod_q;
 	state_m->mod_beta_raw  = c * state_m->mod_q + s * state_m->mod_d;
 
 	update_valpha_vbeta(motor, state_m->mod_alpha_raw, state_m->mod_beta_raw);
 
-    // Dead time compensated values for vd and vq. Note that these are not used to control the switching times.
+	// Dead time compensated values for vd and vq. Note that these are not used to control the switching times.
 	state_m->vd = c * motor->m_motor_state.v_alpha + s * motor->m_motor_state.v_beta;
 	state_m->vq = c * motor->m_motor_state.v_beta  - s * motor->m_motor_state.v_alpha;
 

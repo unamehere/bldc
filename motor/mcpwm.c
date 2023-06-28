@@ -2092,19 +2092,19 @@ void mcpwm_adc_int_handler(void *p, uint32_t flags) {
 		float current_in_filter = mcpwm_get_tot_current_in_filtered();
 
 		// Apply limits in priority order
-		if (current_nofilter > conf->lo_current_max) {
+		if (current_filter > conf->lo_current_max) {
 			utils_step_towards((float*) &dutycycle_now, 0.0,
-					ramp_step_no_lim * fabsf(current_nofilter - conf->lo_current_max) * conf->m_current_backoff_gain);
+					ramp_step_no_lim * fabsf(current_filter - conf->lo_current_max) * conf->m_current_backoff_gain);
 			limit_delay = 1;
-		} else if (current_nofilter < conf->lo_current_min) {
+		} else if (current_filter < conf->lo_current_min) {
 			utils_step_towards((float*) &dutycycle_now, direction ? conf->l_max_duty : -conf->l_max_duty,
 					ramp_step_no_lim * fabsf(current_nofilter - conf->lo_current_min) * conf->m_current_backoff_gain);
 			limit_delay = 1;
-		} else if (current_in_nofilter > conf->lo_in_current_max) {
+		} else if (current_in_filter > conf->lo_in_current_max) {
 			utils_step_towards((float*) &dutycycle_now, 0.0,
 					ramp_step_no_lim * fabsf(current_in_nofilter - conf->lo_in_current_max) * conf->m_current_backoff_gain);
 			limit_delay = 1;
-		} else if (current_in_nofilter < conf->lo_in_current_min) {
+		} else if (current_in_filter < conf->lo_in_current_min) {
 			utils_step_towards((float*) &dutycycle_now, direction ? conf->l_max_duty : -conf->l_max_duty,
 					ramp_step_no_lim * fabsf(current_in_nofilter - conf->lo_in_current_min) * conf->m_current_backoff_gain);
 			limit_delay = 1;

@@ -102,7 +102,6 @@ lbm_value array_extension_unsafe_free_array(lbm_value *args, lbm_uint argn) {
     return res;
   }
   lbm_array_header_t *array = (lbm_array_header_t *)lbm_car(args[0]);
-  if (array == NULL) return ENC_SYM_FATAL_ERROR;
   if (lbm_memory_ptr_inside(array->data)) {
     lbm_memory_free((lbm_uint *)array->data);
     lbm_uint ptr = lbm_dec_ptr(args[0]);
@@ -126,7 +125,6 @@ lbm_value array_extension_buffer_append_i8(lbm_value *args, lbm_uint argn) {
       return res;
     }
     lbm_array_header_t *array = (lbm_array_header_t *)lbm_car(args[0]);
-    if (array == NULL) return ENC_SYM_FATAL_ERROR;
     lbm_uint index = lbm_dec_as_u32(args[1]);
     lbm_int value = lbm_dec_as_i32(args[2]);
 
@@ -161,7 +159,6 @@ lbm_value array_extension_buffer_append_i16(lbm_value *args, lbm_uint argn) {
       return res;
     }
     lbm_array_header_t *array = (lbm_array_header_t *)lbm_car(args[0]);
-    if (array == NULL) return ENC_SYM_FATAL_ERROR;
 
     lbm_uint index = lbm_dec_as_u32(args[1]);
     lbm_int value = lbm_dec_as_i32(args[2]);
@@ -207,7 +204,6 @@ lbm_value array_extension_buffer_append_i24(lbm_value *args, lbm_uint argn) {
       return res;
     }
     lbm_array_header_t *array = (lbm_array_header_t *)lbm_car(args[0]);
-    if (array == NULL) return ENC_SYM_FATAL_ERROR;
 
     lbm_uint index = lbm_dec_as_u32(args[1]);
     lbm_int value = lbm_dec_as_i32(args[2]);
@@ -255,7 +251,6 @@ lbm_value array_extension_buffer_append_i32(lbm_value *args, lbm_uint argn) {
       return res;
     }
     lbm_array_header_t *array = (lbm_array_header_t *)lbm_car(args[0]);
-    if (array == NULL) return ENC_SYM_FATAL_ERROR;
 
     lbm_uint index = lbm_dec_as_u32(args[1]);
     lbm_int value = lbm_dec_as_i32(args[2]);
@@ -298,7 +293,6 @@ lbm_value array_extension_buffer_append_u8(lbm_value *args, lbm_uint argn) {
       return res;
     }
     lbm_array_header_t *array = (lbm_array_header_t *)lbm_car(args[0]);
-    if (array == NULL) return ENC_SYM_FATAL_ERROR;
 
     lbm_uint index = lbm_dec_as_u32(args[1]);
     lbm_uint value = lbm_dec_as_u32(args[2]);
@@ -337,7 +331,6 @@ lbm_value array_extension_buffer_append_u16(lbm_value *args, lbm_uint argn) {
       return res;
     }
     lbm_array_header_t *array = (lbm_array_header_t *)lbm_car(args[0]);
-    if (array == NULL) return ENC_SYM_FATAL_ERROR;
 
     lbm_uint index = lbm_dec_as_u32(args[1]);
     lbm_uint value = lbm_dec_as_u32(args[2]);
@@ -383,7 +376,6 @@ lbm_value array_extension_buffer_append_u24(lbm_value *args, lbm_uint argn) {
       return res;
     }
     lbm_array_header_t *array = (lbm_array_header_t *)lbm_car(args[0]);
-    if (array == NULL) return ENC_SYM_FATAL_ERROR;
 
     lbm_uint index = lbm_dec_as_u32(args[1]);
     lbm_uint value = lbm_dec_as_u32(args[2]);
@@ -431,7 +423,6 @@ lbm_value array_extension_buffer_append_u32(lbm_value *args, lbm_uint argn) {
       return res;
     }
     lbm_array_header_t *array = (lbm_array_header_t *)lbm_car(args[0]);
-    if (array == NULL) return ENC_SYM_FATAL_ERROR;
 
     lbm_uint index = lbm_dec_as_u32(args[1]);
     lbm_uint value = lbm_dec_as_u32(args[2]);
@@ -494,7 +485,7 @@ static lbm_float u_to_float(uint32_t v) {
 
   float sig = 0.0;
   if (e != 0 || sig_i != 0) {
-    sig = (float)sig_i / (8388608.0 * 2.0) + 0.5;
+    sig = (float)sig_i / (8388608.0f * 2.0f) + 0.5f;
     e -= 126;
   }
 
@@ -525,7 +516,6 @@ lbm_value array_extension_buffer_append_f32(lbm_value *args, lbm_uint argn) {
       return res;
     }
     lbm_array_header_t *array = (lbm_array_header_t *)lbm_car(args[0]);
-    if (array == NULL) return ENC_SYM_FATAL_ERROR;
 
     float f_value = (float)lbm_dec_as_float(args[2]);
     lbm_value value = float_to_u(f_value);
@@ -568,7 +558,6 @@ lbm_value array_extension_buffer_get_i8(lbm_value *args, lbm_uint argn) {
       return res;
     }
     lbm_array_header_t *array = (lbm_array_header_t *)lbm_car(args[0]);
-    if (array == NULL) return ENC_SYM_FATAL_ERROR;
 
     lbm_uint index = lbm_dec_as_u32(args[1]);
     lbm_uint value = 0;
@@ -602,7 +591,6 @@ lbm_value array_extension_buffer_get_i16(lbm_value *args, lbm_uint argn) {
       return res;
     }
     lbm_array_header_t *array = (lbm_array_header_t *)lbm_car(args[0]);
-    if (array == NULL) return ENC_SYM_FATAL_ERROR;
 
     lbm_uint index = lbm_dec_as_u32(args[1]);
     lbm_uint value = 0;
@@ -648,7 +636,6 @@ lbm_value array_extension_buffer_get_i32(lbm_value *args, lbm_uint argn) {
       return res;
     }
     lbm_array_header_t *array = (lbm_array_header_t *)lbm_car(args[0]);
-    if (array == NULL) return ENC_SYM_FATAL_ERROR;
 
     lbm_uint index = lbm_dec_as_u32(args[1]);
     uint32_t value = 0;
@@ -690,7 +677,6 @@ lbm_value array_extension_buffer_get_u8(lbm_value *args, lbm_uint argn) {
       return res;
     }
     lbm_array_header_t *array = (lbm_array_header_t *)lbm_car(args[0]);
-    if (array == NULL) return ENC_SYM_FATAL_ERROR;
 
     lbm_uint index = lbm_dec_as_u32(args[1]);
     lbm_int value = 0;
@@ -725,7 +711,6 @@ lbm_value array_extension_buffer_get_u16(lbm_value *args, lbm_uint argn) {
       return res;
     }
     lbm_array_header_t *array = (lbm_array_header_t *)lbm_car(args[0]);
-    if (array == NULL) return ENC_SYM_FATAL_ERROR;
 
     lbm_uint index = lbm_dec_as_u32(args[1]);
     lbm_int value = 0;
@@ -771,7 +756,6 @@ lbm_value array_extension_buffer_get_u24(lbm_value *args, lbm_uint argn) {
       return res;
     }
     lbm_array_header_t *array = (lbm_array_header_t *)lbm_car(args[0]);
-    if (array == NULL) return ENC_SYM_FATAL_ERROR;
 
     lbm_uint index = lbm_dec_as_u32(args[1]);
     lbm_int value = 0;
@@ -820,7 +804,6 @@ lbm_value array_extension_buffer_get_u32(lbm_value *args, lbm_uint argn) {
       return res;
     }
     lbm_array_header_t *array = (lbm_array_header_t *)lbm_car(args[0]);
-    if (array == NULL) return ENC_SYM_FATAL_ERROR;
 
     lbm_uint index = lbm_dec_as_u32(args[1]);
     uint32_t value = 0;
@@ -870,7 +853,6 @@ lbm_value array_extension_buffer_get_f32(lbm_value *args, lbm_uint argn) {
       return res;
     }
     lbm_array_header_t *array = (lbm_array_header_t *)lbm_car(args[0]);
-    if (array == NULL) return ENC_SYM_FATAL_ERROR;
 
     uint32_t index = (uint32_t)lbm_dec_as_u32(args[1]);
     uint32_t value = 0;
@@ -907,13 +889,12 @@ lbm_value array_extension_buffer_length(lbm_value *args, lbm_uint argn) {
   if (argn == 1 &&
       lbm_is_array_r(args[0])) {
     lbm_array_header_t *array = (lbm_array_header_t *)lbm_car(args[0]);
-    if (array == NULL) return ENC_SYM_FATAL_ERROR;
     res = lbm_enc_i((lbm_int)array->size);
   }
   return res;
 }
 
-
+//TODO: Have to think about 32 vs 64 bit here
 static lbm_value array_extensions_bufclear(lbm_value *args, lbm_uint argn) {
   lbm_value res = ENC_SYM_EERROR;
 
@@ -931,25 +912,25 @@ static lbm_value array_extensions_bufclear(lbm_value *args, lbm_uint argn) {
     clear_byte = (uint8_t)lbm_dec_as_u32(args[1]);
   }
 
-  unsigned int start = 0;
+  uint32_t start = 0;
   if (argn >= 3) {
     if (!lbm_is_number(args[2])) {
       return res;
     }
-    unsigned int start_new = lbm_dec_as_u32(args[2]);
+    uint32_t start_new = lbm_dec_as_u32(args[2]);
     if (start_new < array->size) {
       start = start_new;
     } else {
       return res;
     }
   }
-
-  unsigned int len = array->size - start;
+  // Truncates size on 64 bit build
+  uint32_t len = (uint32_t)array->size - start;
   if (argn >= 4) {
     if (!lbm_is_number(args[3])) {
       return res;
     }
-    unsigned int len_new = lbm_dec_as_u32(args[3]);
+    uint32_t len_new = lbm_dec_as_u32(args[3]);
     if (len_new <= len) {
       len = len_new;
     }
@@ -971,19 +952,19 @@ static lbm_value array_extensions_bufcpy(lbm_value *args, lbm_uint argn) {
 
   lbm_array_header_t *array1 = (lbm_array_header_t *)lbm_car(args[0]);
 
-  unsigned int start1 = lbm_dec_as_u32(args[1]);
+  uint32_t start1 = lbm_dec_as_u32(args[1]);
 
   lbm_array_header_t *array2 = (lbm_array_header_t *)lbm_car(args[2]);
 
-  unsigned int start2 = lbm_dec_as_u32(args[3]);
-  unsigned int len = lbm_dec_as_u32(args[4]);
+  uint32_t start2 = lbm_dec_as_u32(args[3]);
+  uint32_t len = lbm_dec_as_u32(args[4]);
 
   if (start1 < array1->size && start2 < array2->size) {
     if (len > (array1->size - start1)) {
-      len = (array1->size - start1);
+      len = ((uint32_t)array1->size - start1);
     }
     if (len > (array2->size - start2)) {
-      len = (array2->size - start2);
+      len = ((uint32_t)array2->size - start2);
     }
 
     memcpy((char*)array1->data + start1, (char*)array2->data + start2, len);

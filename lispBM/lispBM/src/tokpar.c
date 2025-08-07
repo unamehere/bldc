@@ -16,7 +16,6 @@
 */
 
 #include <stdbool.h>
-//#include <stdio.h>
 #include <ctype.h>
 #include <string.h>
 #include <stdlib.h>
@@ -27,7 +26,6 @@
 #include "tokpar.h"
 #include "symrepr.h"
 #include "heap.h"
-#include "qq_expand.h"
 #include "env.h"
 
 char tokpar_sym_str[TOKENIZER_MAX_SYMBOL_AND_STRING_LENGTH];
@@ -42,8 +40,35 @@ typedef struct {
   uint32_t len;
 } matcher;
 
+/*
+  \#\a -> 7                 ; control-g
+  \#\b -> 8                 ; backspace, BS
+  \#\t -> 9                 ; tab, TAB
+  \#\n -> 10                ; newline
+  \#\v -> 11                ; vertical tab
+  \#\f -> 12                ; formfeed character
+  \#\r -> 13                ; carriage return, RET
+  \#\e -> 27                ; escape character, ESC
+  \#\s -> 32                ; space character, SPC
+  \#\\ -> 92                ; backslash character, \
+  \#\d -> 127               ; delete character, DEL
+*/
 
-#define NUM_FIXED_SIZE_TOKENS 15
+#define NUM_SPECIAL_CHARS 11
+const char special_chars[NUM_SPECIAL_CHARS][2] =
+  {{'a', '\a'},
+   {'b', '\b'},
+   {'t', '\t'},
+   {'n', '\n'},
+   {'v', '\v'},
+   {'f', '\f'},
+   {'r', '\r'},
+   {'e', 27},
+   {'s', 32},
+   {'\\', '\\'},
+   {'d', 127}};
+
+#define NUM_FIXED_SIZE_TOKENS 16
 const matcher fixed_size_tokens[NUM_FIXED_SIZE_TOKENS] = {
   {"(", TOKOPENPAR, 1},
   {")", TOKCLOSEPAR, 1},
@@ -59,7 +84,8 @@ const matcher fixed_size_tokens[NUM_FIXED_SIZE_TOKENS] = {
   {"{", TOKOPENCURL, 1},
   {"}", TOKCLOSECURL, 1},
   {"@const-start", TOKCONSTSTART, 12},
-  {"@const-end", TOKCONSTEND, 10}, 
+  {"@const-end", TOKCONSTEND, 10},
+  {"@const-symbol-strings", TOKCONSTSYMSTR, 21},
 };
 
 #define NUM_TYPE_QUALIFIERS 9
@@ -107,9 +133,19 @@ int tok_syntax(lbm_char_channel_t *chan, uint32_t *res) {
   return tok_match_fixed_size_tokens(chan, fixed_size_tokens, 0, NUM_FIXED_SIZE_TOKENS, res);
 }
 
-bool symchar0(char c) {
-  const char *allowed = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ+-*/=<>#!";
+static bool alpha_char(char c) {
+  return ((c >= 'a' && c <= 'z') ||
+          (c >= 'A' && c <= 'Z'));
+}
 
+static bool num_char(char c) {
+  return (c >= '0' && c <= '9');
+}
+
+static bool symchar0(char c) {
+  const char *allowed = "+-*/=<>#!";
+
+  if (alpha_char(c)) return true;
   int i = 0;
   while (allowed[i] != 0) {
     if (c == allowed[i]) return true;
@@ -118,9 +154,10 @@ bool symchar0(char c) {
   return false;
 }
 
-bool symchar(char c) {
-  const char *allowed = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+-*/=<>!?_";
+static bool symchar(char c) {
+  const char *allowed = "+-*/=<>!?_";
 
+  if (alpha_char(c) || num_char(c)) return true;
   int i = 0;
   while (allowed[i] != 0) {
     if (c == allowed[i]) return true;
@@ -147,6 +184,7 @@ int tok_symbol(lbm_char_channel_t *chan) {
 
   r = lbm_channel_peek(chan,(unsigned int)len, &c);
   while (r == CHANNEL_SUCCESS && symchar(c)) {
+    if (len >= 255) return TOKENIZER_SYMBOL_ERROR;
     c = (char)tolower(c);
     if (len < TOKENIZER_MAX_SYMBOL_AND_STRING_LENGTH) {
       tokpar_sym_str[len] = (char)c;
@@ -155,6 +193,7 @@ int tok_symbol(lbm_char_channel_t *chan) {
     r = lbm_channel_peek(chan,(unsigned int)len, &c);
   }
   if (r == CHANNEL_MORE) return TOKENIZER_NEED_MORE;
+  tokpar_sym_str[len] = 0;
   return len;
 }
 
@@ -231,6 +270,24 @@ int tok_char(lbm_char_channel_t *chan, char *res) {
   if (r == CHANNEL_MORE) return TOKENIZER_NEED_MORE;
   if (r == CHANNEL_END)  return TOKENIZER_NO_TOKEN;
 
+  if (c == '\\') {
+    r = lbm_channel_peek(chan, 3, &c);
+    if (r == CHANNEL_MORE) return TOKENIZER_NEED_MORE;
+    if (r == CHANNEL_END)  return TOKENIZER_NO_TOKEN;
+
+    bool ok = false;
+    for (int i = 0; i < NUM_SPECIAL_CHARS; i ++) {
+      if (c == special_chars[i][0]) {
+        *res = special_chars[i][1];
+        ok = true;
+      }
+    }
+    if (ok) {
+      return 4;
+    } else {
+      return TOKENIZER_CHAR_ERROR;
+    }
+  }
   *res = c;
   return 3;
 }
@@ -319,14 +376,14 @@ int tok_double(lbm_char_channel_t *chan, token_float *result) {
       (!result->negative && n > 0)) valid_num = true;
 
   if (n > 127) {
-    return 0;
+    return TOKENIZER_NO_TOKEN;
   }
 
   if(valid_num) {
     result->value = (double)strtod(fbuf,NULL);
     return (int)n + type_len;
   }
-  return 0;
+  return TOKENIZER_NO_TOKEN;
 }
 
 bool tok_clean_whitespace(lbm_char_channel_t *chan) {
@@ -391,7 +448,7 @@ int tok_integer(lbm_char_channel_t *chan, token_int *result) {
   if (res == CHANNEL_MORE) {
     return TOKENIZER_NEED_MORE;
   } else if (res == CHANNEL_END) {
-    return 0;
+    return TOKENIZER_NO_TOKEN;
   }
   if (c == '-') {
     n = 1;
@@ -417,7 +474,7 @@ int tok_integer(lbm_char_channel_t *chan, token_int *result) {
     res = lbm_channel_peek(chan,n, &c);
 
     if (res == CHANNEL_MORE) return TOKENIZER_NEED_MORE;
-    else if (res == CHANNEL_END) return 0;
+    else if (res == CHANNEL_END) return TOKENIZER_NO_TOKEN;
 
     while ((c >= '0' && c <= '9') ||
            (c >= 'a' && c <= 'f') ||
@@ -449,7 +506,7 @@ int tok_integer(lbm_char_channel_t *chan, token_int *result) {
     }
   }
 
-  if (n == 0) return 0;
+  if (n == 0) return TOKENIZER_NO_TOKEN;
 
   uint32_t tok_res;
   int type_len = tok_match_fixed_size_tokens(chan, type_qual_table, n, NUM_TYPE_QUALIFIERS, &tok_res);
@@ -467,5 +524,5 @@ int tok_integer(lbm_char_channel_t *chan, token_int *result) {
     result->value = acc;
     return (int)n + type_len;
   }
-  return 0;
+  return TOKENIZER_NO_TOKEN;
 }

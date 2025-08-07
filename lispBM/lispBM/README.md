@@ -18,12 +18,27 @@ The LispBM mascot, Lispy the llama, was created by
 ## Want to get involved and help out?
 
 There are lots of interesting things to code on in and around the
-LispBM runtime system.
+LispBM runtime system. I would love to interact with people who are interested
+in high-level programming languages on microcontrollers (or elsewhere) so please
+do not be shy to make contact. Together we can make great stuff happen ;)
 
 1. Are you interested in microcontrollers and programming languages?
 2. You find it fun to mess around in C code with close to zero comments?
 3. Then join in the fun. Lots to do, so little time!
 4. Poke me by mail bo(dot)joel(dot)svensson(whirly-a)gmail(dot)com.
+
+There are areas where insights and help would matter greatly. Some I can
+think of are:
+
+1. Running LispBM on system simulators.
+2. LispBM efficiency, compilation, byte-code and real time garbage collection.
+3. Code size optimisation. Do more with less, while maintaining performance.
+4. Documentation and testing.
+5. Useful extension libraries.
+6. Lisp scriptable home automation.
+7. Lisp scriptable MIDI sequencers.
+8. Lisp scriptable Audio synthesizers.
+9. ...
 
 ## Getting started 
 
@@ -46,46 +61,23 @@ what we call "extensions" which are C functions that can be called from your Lis
  - Gotchas and caveats [Gotchas and caveats](./doc/gotchas.md).
  - Work in progress [LispBM programming manual](./doc/manual).
  - C code documentation can be found [here](http://svenssonjoel.github.io/lbmdoc/html/index.html).
- - LispBM's internals are documented as a series of [blog posts](http://svenssonjoel.github.io).
+ - LispBM's internals are documented as a series of (now quite outdated) [blog posts](http://svenssonjoel.github.io).
  - There are [demonstrations on YouTube](https://youtube.com/playlist?list=PLtf_3TaqZoDOQqZcB9Yj-R1zS2DWDZ9q9).
 
-### Compile a 64bit binary for linux
+## The LBM REPL
 
-1. Build the repl: `cd repl` and then `make all64`
+There is an example REPL implementation that runs on X86 32 or 64bit in the `repl` directory.
+The REPL depends on libreadline.
 
-2. Run the repl: `./repl`
 
-## Compile a 32bit binary for linux (Requires 32bit libraries. May need something like "multilib" on a 64bit linux)
+**REPL Dependencies for 32Bit executable on 64Bit linux:**
+* libreadline
+* lib32readline
+* gcc-multilib
 
-1. Build the repl: `cd repl` and then `make`
+On Ubunty you can obtain the depencies by:
+`sudo apt-get install gcc-multilib libreadline-dev lib32readline-dev`
 
-2. Run the repl: `./repl`
+Then issue command `make` in the repl directory.
 
-### Compile on Raspberry Pi
 
-To build the library exeute the following command in the lispbm folder:
-
-```
-PLATFORM=pi make
-```
-
-To build the `repl` example repl do:
-
-```
-cd repl
-make pirepl
-```
-
-Then start it up using `./repl`
-Building the library is not a prerequisite for building the repl anymore.
-
-### SDL and LispBM
-
-In the `sdlrepl` directory there is a start of a set of SDL bindings for LispBM.
-
-To build this repl you need the following dependencies:
-
-1. libsdl2-dev - `sudo apt-get install libsdl2-dev`
-2. libsdl2-image-dev - `sudo apt-get install libsdl2-image-dev`
-
-Then compile the repl using the command `make`
